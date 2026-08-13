@@ -47,7 +47,19 @@
       background: #eef3f8;
       padding: 4px 12px;
       border-radius: 20px;
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .change-btn {
+      background: none;
+      border: none;
+      color: var(--accent-color);
+      text-decoration: underline;
+      cursor: pointer;
+      font-size: 0.75rem;
+      padding: 0;
     }
 
     .stats {
@@ -95,6 +107,7 @@
       min-height: 24px;
     }
 
+    /* BESTENLISTE STYLING */
     .leaderboard {
       margin-top: 20px;
       text-align: left;
@@ -123,16 +136,19 @@
       border-bottom: 1px solid #f0f0f0;
     }
 
-    .leaderboard-item:nth-child(1) { font-weight: bold; color: #d4af37; }
-    .leaderboard-item:nth-child(2) { font-weight: bold; color: #7f8c8d; }
-    .leaderboard-item:nth-child(3) { font-weight: bold; color: #a0522d; }
+    .leaderboard-item:nth-child(1) { font-weight: bold; color: #d4af37; } /* Gold */
+    .leaderboard-item:nth-child(2) { font-weight: bold; color: #7f8c8d; } /* Silber */
+    .leaderboard-item:nth-child(3) { font-weight: bold; color: #a0522d; } /* Bronze */
   </style>
 </head>
 <body>
 
   <div class="puzzle-container">
     <h2>EUROMASTER Monday Challenge</h2>
-    <div class="user-badge">Spieler: <strong id="username-display">Lädt...</strong></div>
+    <div class="user-badge">
+      <span>Spieler: <strong id="username-display">Lädt...</strong></span>
+      <button class="change-btn" onclick="changeUsername()">(Konto wechseln)</button>
+    </div>
 
     <div class="stats">
       <div>Zeit: <span id="timer">00:00</span></div>
@@ -142,6 +158,7 @@
     <div id="board"></div>
     <div id="message" class="message-box"></div>
 
+    <!-- GLOBALE BESTENLISTE -->
     <div class="leaderboard">
       <h3>🏆 Globale Wochen-Bestenliste</h3>
       <ol id="leaderboard-list" class="leaderboard-list">
@@ -151,41 +168,43 @@
   </div>
 
   <script>
+    // =========================================================================
+    // 1. ONLINE-SPEICHER ID (dein npoint.io Link ist integriert)
+    // =========================================================================
     const npointId = "9498b3059b39cb8ddcc2"; 
 
     // =========================================================================
-    // OPTION 1: AUTOMATISCHE ANFRAGE AN DAS MASTERNET (via postMessage)
+    // 2. NAMENS-LOGIK MIT SPEICHERUNG & MANUAL CHANGE
     // =========================================================================
-    let currentUser = "Anonym";
-    let nameReceived = false;
+    let currentUser = localStorage.getItem("em_puzzle_username");
 
-    // 1. Nachrichten vom Masternet empfangen
-    window.addEventListener("message", (event) => {
-      if (event.data && event.data.type === "SET_USER_NAME" && event.data.name) {
-        currentUser = event.data.name.trim();
-        nameReceived = true;
+    function initUser() {
+      if (!currentUser || currentUser.trim() === "") {
+        promptForUsername();
+      } else {
         document.getElementById("username-display").innerText = currentUser;
       }
-    });
-
-    // 2. Anfrage an das übergeordnete Masternet senden
-    if (window.parent !== window) {
-      window.parent.postMessage({ type: "REQUEST_USER_NAME" }, "*");
     }
 
-    // 3. Fallback: Wenn das Masternet nach 1.5s nicht antwortet, Pop-up öffnen
-    setTimeout(() => {
-      if (!nameReceived) {
-        const input = prompt("Willkommen zur EUROMASTER Challenge! Bitte gib deinen Namen ein:", "");
-        if (input && input.trim() !== "") {
-          currentUser = input.trim();
-        }
-        document.getElementById("username-display").innerText = currentUser;
+    function promptForUsername() {
+      const input = prompt("Willkommen zur EUROMASTER Challenge! Bitte gib deinen Namen ein:", currentUser || "");
+      if (input && input.trim() !== "") {
+        currentUser = input.trim();
+        localStorage.setItem("em_puzzle_username", currentUser);
+      } else if (!currentUser) {
+        currentUser = "Anonym";
       }
-    }, 1500);
+      document.getElementById("username-display").innerText = currentUser;
+    }
+
+    function changeUsername() {
+      promptForUsername();
+    }
+
+    initUser();
 
     // =========================================================================
-    // GITHUB BILDER- & MONTAGS-LOGIK
+    // 3. GITHUB BILDER- & MONTAGS-LOGIK
     // =========================================================================
     const githubUsername = "David24387"; 
     const repositoryName = "euromaster-puzzle-images";
@@ -207,7 +226,7 @@
     let imageUrl = `https://raw.githubusercontent.com/${githubUsername}/${repositoryName}/main/${imageNumber}.jpg`;
 
     // =========================================================================
-    // SPIEL-LOGIK
+    // 4. SPIEL-LOGIK
     // =========================================================================
     const board = document.getElementById("board");
     const timerEl = document.getElementById("timer");
@@ -312,6 +331,9 @@
       }
     }
 
+    // =========================================================================
+    // 5. GLOBALE RANGLISTEN-LOGIK (npoint.io)
+    // =========================================================================
     function loadGlobalLeaderboard() {
       fetch(`https://api.npoint.io/${npointId}`)
       .then(res => res.json())
