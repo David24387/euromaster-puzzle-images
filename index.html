@@ -9,7 +9,7 @@
       --primary-color: #003366; /* EUROMASTER Blau */
       --accent-color: #e30613;  /* EUROMASTER Rot */
       --bg-color: #f4f6f9;
-      --board-size: 300px;      /* Gesamtgröße des Spielfelds */
+      --board-size: 300px;
     }
 
     body {
@@ -17,7 +17,6 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
       background-color: var(--bg-color);
       margin: 0;
       padding: 20px;
@@ -40,10 +39,14 @@
       font-size: 1.4rem;
     }
 
-    p.subtitle {
+    .user-badge {
       font-size: 0.85rem;
-      color: #666;
-      margin-bottom: 15px;
+      color: #555;
+      margin-bottom: 12px;
+      background: #eef3f8;
+      padding: 4px 10px;
+      border-radius: 20px;
+      display: inline-block;
     }
 
     .stats {
@@ -85,18 +88,51 @@
     }
 
     .message-box {
-      margin-top: 15px;
+      margin-top: 12px;
       font-weight: bold;
       color: #2e7d32;
       min-height: 24px;
     }
+
+    /* Ranglisten-Styling */
+    .leaderboard {
+      margin-top: 20px;
+      text-align: left;
+      border-top: 2px solid #eef3f8;
+      padding-top: 15px;
+    }
+
+    .leaderboard h3 {
+      margin: 0 0 10px 0;
+      font-size: 1.1rem;
+      color: var(--primary-color);
+      text-align: center;
+    }
+
+    .leaderboard-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .leaderboard-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .leaderboard-item:nth-child(1) { font-weight: bold; color: #d4af37; } /* Platz 1 Gold */
+    .leaderboard-item:nth-child(2) { font-weight: bold; color: #a8a8a8; } /* Platz 2 Silber */
+    .leaderboard-item:nth-child(3) { font-weight: bold; color: #b87333; } /* Platz 3 Bronze */
   </style>
 </head>
 <body>
 
   <div class="puzzle-container">
     <h2>EUROMASTER Monday Challenge</h2>
-    <p class="subtitle">Schaffst du das Puzzle heute am schnellsten?</p>
+    <div class="user-badge">Hallo, <span id="username-display">Gast</span>!</div>
 
     <div class="stats">
       <div>Zeit: <span id="timer">00:00</span></div>
@@ -105,19 +141,40 @@
 
     <div id="board"></div>
     <div id="message" class="message-box"></div>
+
+    <!-- RANGLISTE -->
+    <div class="leaderboard">
+      <h3>🏆 Wochen-Bestenliste</h3>
+      <ol id="leaderboard-list" class="leaderboard-list">
+        <li style="text-align:center; color:#888; font-size:0.8rem;">Noch keine Zeiten diese Woche.</li>
+      </ol>
+    </div>
   </div>
 
   <script>
     // =========================================================================
-    // 1. GITHUB KONFIGURATION
+    // 1. BENUTZER ERKENNEN (URL Parameter oder Prompt)
+    // =========================================================================
+    const urlParams = new URLSearchParams(window.location.search);
+    let currentUser = urlParams.get('user');
+
+    // Falls kein Name in der URL mitgegeben wurde (z.B. ?user=Max):
+    if (!currentUser) {
+      currentUser = localStorage.getItem("puzzle_username");
+      if (!currentUser) {
+        currentUser = prompt("Willkommen bei der EUROMASTER Challenge! Wie ist dein Name?", "Kollege") || "Anonym";
+        localStorage.setItem("puzzle_username", currentUser);
+      }
+    }
+    document.getElementById("username-display").innerText = currentUser;
+
+    // =========================================================================
+    // 2. GITHUB KONFIGURATION & MONTAGS-LOGIK
     // =========================================================================
     const githubUsername = "David24387"; 
     const repositoryName = "euromaster-puzzle-images";
-    const totalImages = 36; // Deine 36 hochgeladenen Bilder (1.jpg bis 36.jpg)
+    const totalImages = 36;
 
-    // =========================================================================
-    // 2. MONTAGS-LOGIK (Startet jetzt in KW 33 mit Bild 1.jpg)
-    // =========================================================================
     function getWeekNumber(d) {
       d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
       d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
@@ -126,65 +183,48 @@
     }
 
     const currentWeek = getWeekNumber(new Date());
-    const startWeek = 33; // Aktuelle Kalenderwoche (Startwoche)
-    
+    const startWeek = 33; 
     let weekIndex = currentWeek - startWeek;
-    if (weekIndex < 0) weekIndex += 52; // Jahreswechsel berücksichtigen
+    if (weekIndex < 0) weekIndex += 52;
 
-    // Errechnet die Bildnummer (1 bis 36)
     const imageNumber = (weekIndex % totalImages) + 1;
-
-    // Bild-URL über GitHub Raw CDN
     let imageUrl = `https://raw.githubusercontent.com/${githubUsername}/${repositoryName}/main/${imageNumber}.jpg`;
 
     // =========================================================================
-    // 3. SPIEL-VARIABLEN & INITIALISIERUNG
+    // 3. SPIEL-LOGIK
     // =========================================================================
     const board = document.getElementById("board");
     const timerEl = document.getElementById("timer");
     const movesEl = document.getElementById("moves");
     const messageEl = document.getElementById("message");
 
-    const size = 3;         // 3x3 Grid
-    const tileSize = 100;   // 100px pro Kachel
+    const size = 3;
+    const tileSize = 100;
     let tiles = [];
-    let emptyPos = { row: 2, col: 2 }; // Leeres Feld unten rechts
+    let emptyPos = { row: 2, col: 2 };
     let moves = 0;
     let seconds = 0;
     let timerInterval = null;
     let gameStarted = false;
     let gameFinished = false;
 
-    // Bild vorladen & Fallback auf 'master'-Branch falls 'main' fehlschlägt
     const puzzleImg = new Image();
     puzzleImg.src = imageUrl;
-    
-    puzzleImg.onload = () => initGame();
-    
+    puzzleImg.onload = () => { initGame(); updateLeaderboardUI(); };
     puzzleImg.onerror = () => {
-      // Zweiter Versuch über 'master' statt 'main'
       const masterUrl = `https://raw.githubusercontent.com/${githubUsername}/${repositoryName}/master/${imageNumber}.jpg`;
       const fallbackImg = new Image();
       fallbackImg.src = masterUrl;
-      
-      fallbackImg.onload = () => {
-        imageUrl = masterUrl;
-        initGame();
-      };
-      
-      fallbackImg.onerror = () => {
-        messageEl.style.color = "#c62828";
-        messageEl.innerText = `Fehler beim Laden von Bild ${imageNumber}.jpg. Prüfe ob das Bild '1.jpg' im Repository existiert!`;
-      };
+      fallbackImg.onload = () => { imageUrl = masterUrl; initGame(); updateLeaderboardUI(); };
+      fallbackImg.onerror = () => { messageEl.innerText = "Fehler beim Laden des Bildes."; };
     };
 
     function initGame() {
       board.innerHTML = "";
       tiles = [];
-      
       for (let r = 0; r < size; r++) {
         for (let c = 0; c < size; c++) {
-          if (r === size - 1 && c === size - 1) break; // Letztes Feld bleibt leer
+          if (r === size - 1 && c === size - 1) break;
 
           const tile = document.createElement("div");
           tile.classList.add("tile");
@@ -193,7 +233,6 @@
           
           const pos = { row: r, col: c, correctRow: r, correctCol: c, element: tile };
           tiles.push(pos);
-
           tile.addEventListener("click", () => moveTile(pos));
           board.appendChild(tile);
           updatePosition(pos);
@@ -207,40 +246,27 @@
       tile.element.style.left = `${tile.col * tileSize}px`;
     }
 
-    // =========================================================================
-    // 4. SPIEL-LOGIK (Mischen, Züge & Timer)
-    // =========================================================================
     function moveTile(tile) {
       if (gameFinished) return;
-
       const isAdjacent = (Math.abs(tile.row - emptyPos.row) + Math.abs(tile.col - emptyPos.col)) === 1;
-
       if (isAdjacent) {
         if (!gameStarted) startTimer();
-
-        // Positionen tauschen
         const tempRow = tile.row;
         const tempCol = tile.col;
-
         tile.row = emptyPos.row;
         tile.col = emptyPos.col;
         emptyPos = { row: tempRow, col: tempCol };
-
         updatePosition(tile);
         moves++;
         movesEl.innerText = moves;
-
         checkWin();
       }
     }
 
     function shuffle() {
       for (let i = 0; i < 100; i++) {
-        const validTiles = tiles.filter(t => 
-          (Math.abs(t.row - emptyPos.row) + Math.abs(t.col - emptyPos.col)) === 1
-        );
+        const validTiles = tiles.filter(t => (Math.abs(t.row - emptyPos.row) + Math.abs(t.col - emptyPos.col)) === 1);
         const randomTile = validTiles[Math.floor(Math.random() * validTiles.length)];
-        
         const tempRow = randomTile.row;
         const tempCol = randomTile.col;
         randomTile.row = emptyPos.row;
@@ -260,23 +286,72 @@
       }, 1000);
     }
 
-    // =========================================================================
-    // 5. GEWINN-PRÜFUNG & BACKEND-SCHNITTSTELLE
-    // =========================================================================
     function checkWin() {
       const isSolved = tiles.every(t => t.row === t.correctRow && t.col === t.correctCol);
       if (isSolved) {
         clearInterval(timerInterval);
         gameFinished = true;
-
-        messageEl.innerText = `Glückwunsch! Gelöst in ${seconds} Sek. (${moves} Züge)`;
-
-        sendScoreToMasternet(seconds, moves);
+        messageEl.innerText = `Glückwunsch, ${currentUser}! Gelöst in ${seconds}s.`;
+        saveScore(currentUser, seconds, moves);
       }
     }
 
-    function sendScoreToMasternet(timeInSeconds, totalMoves) {
-      console.log("Ergebnis an Masternet senden:", { timeInSeconds, totalMoves });
+    // =========================================================================
+    // 4. RANGLISTE SPEICHERN & ANZEIGEN
+    // =========================================================================
+    function saveScore(name, time, movesCount) {
+      const storageKey = `em_leaderboard_kw${currentWeek}`;
+      let scores = JSON.parse(localStorage.getItem(storageKey)) || [];
+
+      // Prüfen, ob der Nutzer bereits eine Zeit eingetragen hat (nur beste Zeit behalten)
+      const existingUserIndex = scores.findIndex(entry => entry.name === name);
+      if (existingUserIndex !== -1) {
+        if (time < scores[existingUserIndex].time) {
+          scores[existingUserIndex] = { name, time, moves: movesCount };
+        }
+      } else {
+        scores.push({ name, time, moves: movesCount });
+      }
+
+      // Nach schnellster Zeit sortieren
+      scores.sort((a, b) => a.time - b.time);
+
+      localStorage.setItem(storageKey, JSON.stringify(scores));
+      updateLeaderboardUI();
+
+      /* 
+        HINWEIS FÜR DIE ANBINDUNG AN EURE DATERBANK:
+        Hier könnt ihr auch ein HTTP POST an euer Masternet-Backend senden:
+        
+        fetch('/api/puzzle/save', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ user: name, week: currentWeek, time: time })
+        });
+      */
+    }
+
+    function updateLeaderboardUI() {
+      const storageKey = `em_leaderboard_kw${currentWeek}`;
+      const scores = JSON.parse(localStorage.getItem(storageKey)) || [];
+      const listEl = document.getElementById("leaderboard-list");
+
+      if (scores.length === 0) return;
+
+      listEl.innerHTML = "";
+      scores.slice(0, 5).forEach((entry, index) => {
+        const li = document.createElement("li");
+        li.className = "leaderboard-item";
+        
+        const mins = String(Math.floor(entry.time / 60)).padStart(2, '0');
+        const secs = String(entry.time % 60).padStart(2, '0');
+        
+        li.innerHTML = `
+          <span><strong>${index + 1}.</strong> ${entry.name}</span>
+          <span>${mins}:${secs} (${entry.moves} Züge)</span>
+        `;
+        listEl.appendChild(li);
+      });
     }
   </script>
 </body>
