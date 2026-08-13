@@ -105,7 +105,7 @@
       font-weight: bold;
       color: #2e7d32;
       min-height: 24px;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
     }
 
     .leaderboard {
@@ -168,9 +168,10 @@
 
   <script>
     // =========================================================================
-    // 1. SPEICHER-ENDPOINT (npoint.io)
+    // 1. ZENTRALER SPEICHER-ENDPOINT (JSONBin V3 - Öffentlicher Master Bin)
     // =========================================================================
-    const npointId = "9498b3059b39cb8ddcc2";
+    const BIN_ID = "65ccdb61dc74654018a594ed"; 
+    const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
     // =========================================================================
     // 2. USER-MANAGEMENT
@@ -326,18 +327,20 @@
         clearInterval(timerInterval);
         gameFinished = true;
         messageEl.style.color = "#2e7d32";
-        messageEl.innerText = `Glückwunsch! Gelöst in ${seconds}s. Speichere...`;
+        messageEl.innerText = `Glückwunsch! Speichere Zeit...`;
         saveScoreToGlobalLeaderboard(currentUser, seconds, moves);
       }
     }
 
     // =========================================================================
-    // 5. ROBUSTE RANGLISTEN-SPEICHERUNG
+    // 5. FEHLERFREIE SPEICHERUNG (JSONBin PUT Mechanism)
     // =========================================================================
     async function loadGlobalLeaderboard() {
       try {
-        const response = await fetch(`https://api.npoint.io/${npointId}`);
-        if (!response.ok) throw new Error("Netzwerk-Fehler");
+        const response = await fetch(`${API_URL}/latest`, {
+          headers: { "X-Bin-Meta": "false" }
+        });
+        if (!response.ok) throw new Error("Load Fail");
         const data = await response.json();
         const scores = Array.isArray(data) ? data : [];
         renderLeaderboard(scores);
@@ -348,18 +351,20 @@
 
     async function saveScoreToGlobalLeaderboard(name, time, movesCount) {
       try {
-        // 1. Aktuelle Liste abrufen
-        const response = await fetch(`https://api.npoint.io/${npointId}`);
+        // 1. Aktuelle Daten abrufen
+        const getRes = await fetch(`${API_URL}/latest`, {
+          headers: { "X-Bin-Meta": "false" }
+        });
+        
         let list = [];
-        if (response.ok) {
-          const data = await response.json();
+        if (getRes.ok) {
+          const data = await getRes.json();
           if (Array.isArray(data)) list = data;
         }
 
-        // 2. Prüfen, ob Spieler schon eine Zeit eingetragen hat
+        // 2. Prüfen ob Spieler vorhanden
         const existingIndex = list.findIndex(e => e && e.name && e.name.toLowerCase() === name.toLowerCase());
         if (existingIndex !== -1) {
-          // Nur überschreiben, wenn die neue Zeit schneller war
           if (time < list[existingIndex].time) {
             list[existingIndex] = { name, time, moves: movesCount, week: currentWeek };
           }
@@ -367,28 +372,28 @@
           list.push({ name, time, moves: movesCount, week: currentWeek });
         }
 
-        // 3. Nach bester Zeit sortieren
+        // Sortieren
         list.sort((a, b) => a.time - b.time);
 
-        // 4. Liste abspeichern
-        const saveResponse = await fetch(`https://api.npoint.io/${npointId}`, {
-          method: "POST",
-          headers: { 
+        // 3. Abspeichern per PUT Request
+        const putRes = await fetch(API_URL, {
+          method: "PUT",
+          headers: {
             "Content-Type": "application/json"
           },
           body: JSON.stringify(list)
         });
 
-        if (!saveResponse.ok) throw new Error("Fehler beim Senden");
+        if (!putRes.ok) throw new Error("Save Fail");
 
         messageEl.style.color = "#2e7d32";
-        messageEl.innerText = `Glückwunsch, ${name}! Zeit gespeichert.`;
+        messageEl.innerText = `Glückwunsch, ${name}! Zeit wurde gespeichert.`;
         renderLeaderboard(list);
 
       } catch (err) {
         console.error("Speicherfehler:", err);
         messageEl.style.color = "#c62828";
-        messageEl.innerText = "Fehler beim Speichern der Zeit.";
+        messageEl.innerText = "Fehler beim Speichern. Bitte erneut versuchen.";
       }
     }
 
