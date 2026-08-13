@@ -547,7 +547,7 @@
       }
     }
 
-    // 2. SOFORT-EMAIL FUNKTION MIT VOLLSTÄNDIGEM ERROR-HANDLING
+    // 2. SOFORT-EMAIL FUNKTION MIT VOLLSTÄNDIGER FEHLERANZEIGE
     async function sendLeaderboardEmail() {
       try {
         const res = await fetch(`${FIREBASE_DB_URL}/kw${currentWeek}.json`);
@@ -568,18 +568,25 @@
           messageText += `${index + 1}. ${entry.name} - ${mins}:${secs} (${entry.moves} Züge)\n`;
         });
 
-        // E-Mail senden mit erweiterten Parametern
-        const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        // EmailJS Aufruf mit exakter Fehler-Ausgabe
+        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
           to_email: ADMIN_EMAIL,
           week: currentWeek,
           message: messageText
-        });
-
-        alert(`E-Mail für KW ${currentWeek} wurde erfolgreich gesendet!`);
+        }).then(
+          function(response) {
+            alert(`✅ E-Mail für KW ${currentWeek} wurde erfolgreich gesendet!`);
+          },
+          function(error) {
+            console.error("EmailJS Error:", error);
+            const errDetails = error.text || error.message || JSON.stringify(error);
+            alert(`❌ EmailJS Fehler:\n\n${errDetails}`);
+          }
+        );
 
       } catch (err) {
-        console.error("E-Mail Fehler Details:", err);
-        alert(`Fehler beim Senden der E-Mail:\n${err.text || err.message || JSON.stringify(err)}`);
+        console.error("Allgemeiner Fehler:", err);
+        alert(`❌ Fehler beim Abrufen der Daten:\n${err.message}`);
       }
     }
   </script>
