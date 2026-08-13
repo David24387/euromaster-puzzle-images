@@ -194,7 +194,7 @@
     const ADMIN_EMAIL = "david.mueller@euromaster.com";
 
     // =========================================================================
-    // EMAILJS KONFIGURATION (VOLLSTÄNDIG EINGERICHTET)
+    // EMAILJS KONFIGURATION
     // =========================================================================
     const EMAILJS_SERVICE_ID = "service_rxqnr17"; 
     const EMAILJS_TEMPLATE_ID = "template_8ull2qz"; 
@@ -482,18 +482,106 @@
       });
     }
 
-    // MANUELLE ADMIN-LÖSCHUNG FÜR NOTFÄLLE
+    // =========================================================================
+    // ADMIN-MENÜ MIT DOWNLOAD, EMAIL & LÖSCHEN
+    // =========================================================================
     async function openAdminMenu() {
       const pin = prompt("Bitte Admin-PIN eingeben:");
-      if (pin === ADMIN_PIN) {
-        const confirmDelete = confirm(`Möchtest du die Rangliste für KW ${currentWeek} löschen?`);
+      if (pin !== ADMIN_PIN) {
+        if (pin !== null) alert("Falsche PIN!");
+        return;
+      }
+
+      const choice = prompt(
+        `--- ADMIN MENÜ (KW ${currentWeek}) ---\n\n` +
+        `Wähle eine Option:\n` +
+        `1 = Rangliste als CSV herunterladen (Excel)\n` +
+        `2 = Rangliste JETZT per E-Mail senden\n` +
+        `3 = Rangliste für KW ${currentWeek} LÖSCHEN`
+      );
+
+      if (choice === "1") {
+        downloadLeaderboardCSV();
+      } else if (choice === "2") {
+        sendLeaderboardEmail();
+      } else if (choice === "3") {
+        const confirmDelete = confirm(`BIST DU SICHER?\nDie Rangliste für KW ${currentWeek} wird dauerhaft gelöscht!`);
         if (confirmDelete) {
           await fetch(`${FIREBASE_DB_URL}/kw${currentWeek}.json`, { method: "DELETE" });
           alert(`Rangliste KW ${currentWeek} gelöscht.`);
           loadGlobalLeaderboard();
         }
-      } else if (pin !== null) {
-        alert("Falsche PIN!");
+      }
+    }
+
+    // 1. CSV-DOWNLOAD FUNKTION
+    async function downloadLeaderboardCSV() {
+      try {
+        const res = await fetch(`${FIREBASE_DB_URL}/kw${currentWeek}.json`);
+        const data = await res.json();
+
+        if (!data) {
+          alert(`Keine Daten für KW ${currentWeek} vorhanden.`);
+          return;
+        }
+
+        let scores = Object.values(data);
+        scores.sort((a, b) => a.time - b.time);
+
+        let csvContent = "data:text/csv;charset=utf-8,Platz;Name;Zeit (mm:ss);Sekunden;Zuege\n";
+
+        scores.forEach((entry, index) => {
+          const mins = String(Math.floor(entry.time / 60)).padStart(2, '0');
+          const secs = String(entry.time % 60).padStart(2, '0');
+          csvContent += `${index + 1};"${entry.name}";${mins}:${secs};${entry.time};${entry.moves}\n`;
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `EUROMASTER_Challenge_KW${currentWeek}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        console.error("CSV Fehler:", err);
+        alert("Fehler beim Erstellen der CSV-Datei.");
+      }
+    }
+
+    // 2. SOFORT-EMAIL FUNKTION
+    async function sendLeaderboardEmail() {
+      try {
+        const res = await fetch(`${FIREBASE_DB_URL}/kw${currentWeek}.json`);
+        const data = await res.json();
+
+        if (!data) {
+          alert(`Keine Daten für KW ${currentWeek} vorhanden.`);
+          return;
+        }
+
+        let scores = Object.values(data);
+        scores.sort((a, b) => a.time - b.time);
+
+        let message = `Manuelle Auswertung der EUROMASTER Challenge für KW ${currentWeek}:\n\n`;
+        scores.forEach((entry, index) => {
+          const mins = String(Math.floor(entry.time / 60)).padStart(2, '0');
+          const secs = String(entry.time % 60).padStart(2, '0');
+          message += `${index + 1}. ${entry.name} - ${mins}:${secs} (${entry.moves} Züge)\n`;
+        });
+
+        alert("Sende E-Mail...");
+
+        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+          to_email: ADMIN_EMAIL,
+          week: currentWeek,
+          message: message
+        });
+
+        alert(`E-Mail für KW ${currentWeek} wurde erfolgreich an ${ADMIN_EMAIL} gesendet!`);
+      } catch (err) {
+        console.error("E-Mail Fehler:", err);
+        alert("Fehler beim Senden der E-Mail.");
       }
     }
   </script>
