@@ -278,9 +278,6 @@
 
             await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
               to_email: ADMIN_EMAIL,
-              email: ADMIN_EMAIL,
-              recipient: ADMIN_EMAIL,
-              user_email: ADMIN_EMAIL,
               week: previousWeek,
               message: messageText
             });
@@ -484,7 +481,7 @@
     }
 
     // =========================================================================
-    // ADMIN-MENÜ MIT ALLEN EMPFÄNGER-PARAMETER-FALLBACKS
+    // ADMIN-MENÜ
     // =========================================================================
     async function openAdminMenu() {
       const pin = prompt("Bitte Admin-PIN eingeben:");
@@ -571,23 +568,18 @@
           messageText += `${index + 1}. ${entry.name} - ${mins}:${secs} (${entry.moves} Züge)\n`;
         });
 
-        // Übergabe von allen gängigen Empfänger-Variablen
         emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
           to_email: ADMIN_EMAIL,
-          email: ADMIN_EMAIL,
-          recipient: ADMIN_EMAIL,
-          user_email: ADMIN_EMAIL,
-          to_name: "David",
           week: currentWeek,
           message: messageText
         }).then(
           function(response) {
-            alert(`✅ E-Mail für KW ${currentWeek} wurde erfolgreich an david.mueller@euromaster.com gesendet!`);
+            alert(`✅ E-Mail für KW ${currentWeek} wurde erfolgreich an ${ADMIN_EMAIL} gesendet!`);
           },
           function(error) {
             console.error("EmailJS Error:", error);
             const errDetails = error.text || error.message || JSON.stringify(error);
-            alert(`❌ EmailJS Fehler:\n\n${errDetails}`);
+            alert(`❌ EmailJS Fehler:\n\n${errDetails}\n\nHinweis: Stelle bitte auf emailjs.com im Template 'template_8ull2qz' im Feld 'To Email' fest deine E-Mail-Adresse ein.`);
           }
         );
 
