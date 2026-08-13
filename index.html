@@ -19,7 +19,7 @@
       align-items: center;
       background-color: var(--bg-color);
       margin: 0;
-      padding: 20px;
+      padding: 15px;
       color: #333;
     }
 
@@ -31,12 +31,13 @@
       text-align: center;
       max-width: 340px;
       width: 100%;
+      box-sizing: border-box;
     }
 
     h2 {
       color: var(--primary-color);
       margin: 0 0 5px 0;
-      font-size: 1.4rem;
+      font-size: 1.3rem;
     }
 
     .user-badge {
@@ -44,7 +45,7 @@
       color: #555;
       margin-bottom: 12px;
       background: #eef3f8;
-      padding: 4px 10px;
+      padding: 4px 12px;
       border-radius: 20px;
       display: inline-block;
     }
@@ -94,7 +95,7 @@
       min-height: 24px;
     }
 
-    /* Ranglisten-Styling */
+    /* BESTENLISTE STYLING */
     .leaderboard {
       margin-top: 20px;
       text-align: left;
@@ -104,7 +105,7 @@
 
     .leaderboard h3 {
       margin: 0 0 10px 0;
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       color: var(--primary-color);
       text-align: center;
     }
@@ -118,21 +119,21 @@
     .leaderboard-item {
       display: flex;
       justify-content: space-between;
-      padding: 6px 10px;
+      padding: 6px 8px;
       font-size: 0.85rem;
       border-bottom: 1px solid #f0f0f0;
     }
 
-    .leaderboard-item:nth-child(1) { font-weight: bold; color: #d4af37; } /* Platz 1 Gold */
-    .leaderboard-item:nth-child(2) { font-weight: bold; color: #a8a8a8; } /* Platz 2 Silber */
-    .leaderboard-item:nth-child(3) { font-weight: bold; color: #b87333; } /* Platz 3 Bronze */
+    .leaderboard-item:nth-child(1) { font-weight: bold; color: #d4af37; } /* Gold */
+    .leaderboard-item:nth-child(2) { font-weight: bold; color: #7f8c8d; } /* Silber */
+    .leaderboard-item:nth-child(3) { font-weight: bold; color: #a0522d; } /* Bronze */
   </style>
 </head>
 <body>
 
   <div class="puzzle-container">
     <h2>EUROMASTER Monday Challenge</h2>
-    <div class="user-badge">Hallo, <span id="username-display">Gast</span>!</div>
+    <div class="user-badge">Spieler: <strong id="username-display">Lädt...</strong></div>
 
     <div class="stats">
       <div>Zeit: <span id="timer">00:00</span></div>
@@ -142,34 +143,39 @@
     <div id="board"></div>
     <div id="message" class="message-box"></div>
 
-    <!-- RANGLISTE -->
+    <!-- GLOBALE BESTENLISTE -->
     <div class="leaderboard">
-      <h3>🏆 Wochen-Bestenliste</h3>
+      <h3>🏆 Globale Wochen-Bestenliste</h3>
       <ol id="leaderboard-list" class="leaderboard-list">
-        <li style="text-align:center; color:#888; font-size:0.8rem;">Noch keine Zeiten diese Woche.</li>
+        <li style="text-align:center; color:#888; font-size:0.8rem;">Bestenliste wird geladen...</li>
       </ol>
     </div>
   </div>
 
   <script>
     // =========================================================================
-    // 1. BENUTZER ERKENNEN (URL Parameter oder Prompt)
+    // 1. ONLINE-SPEICHER ID (dein npoint.io Link ist integriert)
     // =========================================================================
-    const urlParams = new URLSearchParams(window.location.search);
-    let currentUser = urlParams.get('user');
+    const npointId = "9498b3059b39cb8ddcc2"; 
 
-    // Falls kein Name in der URL mitgegeben wurde (z.B. ?user=Max):
+    // =========================================================================
+    // 2. NAME DES SPIELERS ERMITTELN / ABFRAGEN
+    // =========================================================================
+    let currentUser = localStorage.getItem("em_puzzle_username");
+
     if (!currentUser) {
-      currentUser = localStorage.getItem("puzzle_username");
-      if (!currentUser) {
-        currentUser = prompt("Willkommen bei der EUROMASTER Challenge! Wie ist dein Name?", "Kollege") || "Anonym";
-        localStorage.setItem("puzzle_username", currentUser);
+      currentUser = prompt("Willkommen zur EUROMASTER Challenge! Bitte gib deinen Namen für die Bestenliste ein:", "");
+      if (!currentUser || currentUser.trim() === "") {
+        currentUser = "Anonym";
+      } else {
+        currentUser = currentUser.trim();
+        localStorage.setItem("em_puzzle_username", currentUser);
       }
     }
     document.getElementById("username-display").innerText = currentUser;
 
     // =========================================================================
-    // 2. GITHUB KONFIGURATION & MONTAGS-LOGIK
+    // 3. GITHUB BILDER- & MONTAGS-LOGIK
     // =========================================================================
     const githubUsername = "David24387"; 
     const repositoryName = "euromaster-puzzle-images";
@@ -191,7 +197,7 @@
     let imageUrl = `https://raw.githubusercontent.com/${githubUsername}/${repositoryName}/main/${imageNumber}.jpg`;
 
     // =========================================================================
-    // 3. SPIEL-LOGIK
+    // 4. SPIEL-LOGIK
     // =========================================================================
     const board = document.getElementById("board");
     const timerEl = document.getElementById("timer");
@@ -210,13 +216,13 @@
 
     const puzzleImg = new Image();
     puzzleImg.src = imageUrl;
-    puzzleImg.onload = () => { initGame(); updateLeaderboardUI(); };
+    puzzleImg.onload = () => { initGame(); loadGlobalLeaderboard(); };
     puzzleImg.onerror = () => {
       const masterUrl = `https://raw.githubusercontent.com/${githubUsername}/${repositoryName}/master/${imageNumber}.jpg`;
       const fallbackImg = new Image();
       fallbackImg.src = masterUrl;
-      fallbackImg.onload = () => { imageUrl = masterUrl; initGame(); updateLeaderboardUI(); };
-      fallbackImg.onerror = () => { messageEl.innerText = "Fehler beim Laden des Bildes."; };
+      fallbackImg.onload = () => { imageUrl = masterUrl; initGame(); loadGlobalLeaderboard(); };
+      fallbackImg.onerror = () => { messageEl.innerText = "Fehler beim Laden des Wochenbildes."; };
     };
 
     function initGame() {
@@ -291,55 +297,69 @@
       if (isSolved) {
         clearInterval(timerInterval);
         gameFinished = true;
-        messageEl.innerText = `Glückwunsch, ${currentUser}! Gelöst in ${seconds}s.`;
-        saveScore(currentUser, seconds, moves);
+        messageEl.innerText = `Glückwunsch! Gelöst in ${seconds}s. Speichere Zeit...`;
+        saveScoreToGlobalLeaderboard(currentUser, seconds, moves);
       }
     }
 
     // =========================================================================
-    // 4. RANGLISTE SPEICHERN & ANZEIGEN
+    // 5. GLOBALE RANGLISTEN-LOGIK (via npoint.io)
     // =========================================================================
-    function saveScore(name, time, movesCount) {
-      const storageKey = `em_leaderboard_kw${currentWeek}`;
-      let scores = JSON.parse(localStorage.getItem(storageKey)) || [];
+    function loadGlobalLeaderboard() {
+      fetch(`https://api.npoint.io/${npointId}`)
+      .then(res => res.json())
+      .then(scores => {
+        renderLeaderboard(scores || []);
+      })
+      .catch(err => console.error("Fehler beim Laden der Bestenliste:", err));
+    }
 
-      // Prüfen, ob der Nutzer bereits eine Zeit eingetragen hat (nur beste Zeit behalten)
-      const existingUserIndex = scores.findIndex(entry => entry.name === name);
-      if (existingUserIndex !== -1) {
-        if (time < scores[existingUserIndex].time) {
-          scores[existingUserIndex] = { name, time, moves: movesCount };
+    function saveScoreToGlobalLeaderboard(name, time, movesCount) {
+      fetch(`https://api.npoint.io/${npointId}`)
+      .then(res => res.json())
+      .then(scores => {
+        let list = Array.isArray(scores) ? scores : [];
+
+        const existingIndex = list.findIndex(e => e.name.toLowerCase() === name.toLowerCase());
+        if (existingIndex !== -1) {
+          if (time < list[existingIndex].time) {
+            list[existingIndex] = { name, time, moves: movesCount, week: currentWeek };
+          }
+        } else {
+          list.push({ name, time, moves: movesCount, week: currentWeek });
         }
-      } else {
-        scores.push({ name, time, moves: movesCount });
-      }
 
-      // Nach schnellster Zeit sortieren
-      scores.sort((a, b) => a.time - b.time);
+        list.sort((a, b) => a.time - b.time);
 
-      localStorage.setItem(storageKey, JSON.stringify(scores));
-      updateLeaderboardUI();
-
-      /* 
-        HINWEIS FÜR DIE ANBINDUNG AN EURE DATERBANK:
-        Hier könnt ihr auch ein HTTP POST an euer Masternet-Backend senden:
-        
-        fetch('/api/puzzle/save', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ user: name, week: currentWeek, time: time })
+        return fetch(`https://api.npoint.io/${npointId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(list)
         });
-      */
+      })
+      .then(res => res.json())
+      .then(() => {
+        messageEl.innerText = `Glückwunsch, ${name}! Deine Zeit wurde gespeichert.`;
+        loadGlobalLeaderboard();
+      })
+      .catch(err => {
+        console.error("Fehler beim Speichern:", err);
+        messageEl.innerText = "Fehler beim Speichern der Zeit.";
+      });
     }
 
-    function updateLeaderboardUI() {
-      const storageKey = `em_leaderboard_kw${currentWeek}`;
-      const scores = JSON.parse(localStorage.getItem(storageKey)) || [];
+    function renderLeaderboard(scores) {
       const listEl = document.getElementById("leaderboard-list");
-
-      if (scores.length === 0) return;
-
       listEl.innerHTML = "";
-      scores.slice(0, 5).forEach((entry, index) => {
+
+      const currentWeekScores = scores.filter(s => s.week === currentWeek);
+
+      if (currentWeekScores.length === 0) {
+        listEl.innerHTML = '<li style="text-align:center; color:#888; font-size:0.8rem;">Noch keine Zeiten in dieser Woche. Sei der Erste!</li>';
+        return;
+      }
+
+      currentWeekScores.slice(0, 5).forEach((entry, index) => {
         const li = document.createElement("li");
         li.className = "leaderboard-item";
         
@@ -348,7 +368,7 @@
         
         li.innerHTML = `
           <span><strong>${index + 1}.</strong> ${entry.name}</span>
-          <span>${mins}:${secs} (${entry.moves} Züge)</span>
+          <span>${mins}:${secs} (${entry.moves} Z.)</span>
         `;
         listEl.appendChild(li);
       });
