@@ -156,7 +156,6 @@
       cursor: pointer;
     }
 
-    /* ADMIN POPUP STYLING */
     .admin-modal {
       display: none;
       position: absolute;
@@ -214,7 +213,6 @@
 
     <button class="admin-trigger" onclick="openAdminMenu()">⚙️</button>
 
-    <!-- KLARES ADMIN PANEL -->
     <div id="admin-modal" class="admin-modal">
       <h3 style="margin: 0; color: var(--primary-color);">Admin-Bereich</h3>
       <button class="admin-btn admin-btn-mail" onclick="sendReportMail()">📧 Bericht per Mail senden</button>
@@ -485,18 +483,33 @@
         return;
       }
 
-      let bodyText = `Hallo David,%0D%0A%0D%0AHier ist die Auswertung der EUROMASTER Challenge für KW ${currentWeek}:%0D%0A%0D%0A`;
+      let reportText = `Auswertung EUROMASTER Challenge - KW ${currentWeek}:\n\n`;
+      let mailBody = `Hallo David,%0D%0A%0D%0AHier ist die Auswertung der EUROMASTER Challenge für KW ${currentWeek}:%0D%0A%0D%0A`;
       
       cachedScores.forEach((entry, index) => {
         const mins = String(Math.floor(entry.time / 60)).padStart(2, '0');
         const secs = String(entry.time % 60).padStart(2, '0');
-        bodyText += `${index + 1}. ${entry.name} - ${mins}:${secs} (${entry.moves} Züge)%0D%0A`;
+        
+        reportText += `${index + 1}. ${entry.name} - ${mins}:${secs} (${entry.moves} Züge)\n`;
+        mailBody += `${index + 1}. ${entry.name} - ${mins}:${secs} (${entry.moves} Züge)%0D%0A`;
       });
 
-      bodyText += `%0D%0AViele Grüße%0D%0ADEIN PUZZLE WIDGET`;
+      mailBody += `%0D%0AViele Grüße%0D%0ADEIN PUZZLE WIDGET`;
 
-      // Öffnet die Mail-Anwendung
-      window.location.href = `mailto:${ADMIN_EMAIL}?subject=Rangliste EUROMASTER Challenge KW ${currentWeek}&body=${bodyText}`;
+      // 1. In Zwischenablage kopieren (als Backup)
+      navigator.clipboard.writeText(reportText).then(() => {
+        console.log("In Zwischenablage kopiert.");
+      }).catch(() => {});
+
+      // 2. Mail-Link öffnen über Top-Window oder Fallback
+      const mailUrl = `mailto:${ADMIN_EMAIL}?subject=Rangliste EUROMASTER Challenge KW ${currentWeek}&body=${mailBody}`;
+      
+      try {
+        window.open(mailUrl, '_blank');
+        alert("Mail-Programm wird geöffnet!\n\n(Die Ergebnisse wurden zusätzlich auch in deine Zwischenablage kopiert)");
+      } catch(e) {
+        alert("Ergebnisse wurden in die Zwischenablage kopiert! Füge sie einfach mit Strg+V in deine Mail ein.");
+      }
     }
 
     async function deleteCurrentLeaderboard() {
