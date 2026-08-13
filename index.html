@@ -95,7 +95,6 @@
       min-height: 24px;
     }
 
-    /* BESTENLISTE STYLING */
     .leaderboard {
       margin-top: 20px;
       text-align: left;
@@ -124,9 +123,9 @@
       border-bottom: 1px solid #f0f0f0;
     }
 
-    .leaderboard-item:nth-child(1) { font-weight: bold; color: #d4af37; } /* Gold */
-    .leaderboard-item:nth-child(2) { font-weight: bold; color: #7f8c8d; } /* Silber */
-    .leaderboard-item:nth-child(3) { font-weight: bold; color: #a0522d; } /* Bronze */
+    .leaderboard-item:nth-child(1) { font-weight: bold; color: #d4af37; }
+    .leaderboard-item:nth-child(2) { font-weight: bold; color: #7f8c8d; }
+    .leaderboard-item:nth-child(3) { font-weight: bold; color: #a0522d; }
   </style>
 </head>
 <body>
@@ -143,7 +142,6 @@
     <div id="board"></div>
     <div id="message" class="message-box"></div>
 
-    <!-- GLOBALE BESTENLISTE -->
     <div class="leaderboard">
       <h3>🏆 Globale Wochen-Bestenliste</h3>
       <ol id="leaderboard-list" class="leaderboard-list">
@@ -153,29 +151,41 @@
   </div>
 
   <script>
-    // =========================================================================
-    // 1. ONLINE-SPEICHER ID (dein npoint.io Link ist integriert)
-    // =========================================================================
     const npointId = "9498b3059b39cb8ddcc2"; 
 
     // =========================================================================
-    // 2. NAME DES SPIELERS ERMITTELN / ABFRAGEN
+    // OPTION 1: AUTOMATISCHE ANFRAGE AN DAS MASTERNET (via postMessage)
     // =========================================================================
-    let currentUser = localStorage.getItem("em_puzzle_username");
+    let currentUser = "Anonym";
+    let nameReceived = false;
 
-    if (!currentUser) {
-      currentUser = prompt("Willkommen zur EUROMASTER Challenge! Bitte gib deinen Namen für die Bestenliste ein:", "");
-      if (!currentUser || currentUser.trim() === "") {
-        currentUser = "Anonym";
-      } else {
-        currentUser = currentUser.trim();
-        localStorage.setItem("em_puzzle_username", currentUser);
+    // 1. Nachrichten vom Masternet empfangen
+    window.addEventListener("message", (event) => {
+      if (event.data && event.data.type === "SET_USER_NAME" && event.data.name) {
+        currentUser = event.data.name.trim();
+        nameReceived = true;
+        document.getElementById("username-display").innerText = currentUser;
       }
+    });
+
+    // 2. Anfrage an das übergeordnete Masternet senden
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: "REQUEST_USER_NAME" }, "*");
     }
-    document.getElementById("username-display").innerText = currentUser;
+
+    // 3. Fallback: Wenn das Masternet nach 1.5s nicht antwortet, Pop-up öffnen
+    setTimeout(() => {
+      if (!nameReceived) {
+        const input = prompt("Willkommen zur EUROMASTER Challenge! Bitte gib deinen Namen ein:", "");
+        if (input && input.trim() !== "") {
+          currentUser = input.trim();
+        }
+        document.getElementById("username-display").innerText = currentUser;
+      }
+    }, 1500);
 
     // =========================================================================
-    // 3. GITHUB BILDER- & MONTAGS-LOGIK
+    // GITHUB BILDER- & MONTAGS-LOGIK
     // =========================================================================
     const githubUsername = "David24387"; 
     const repositoryName = "euromaster-puzzle-images";
@@ -197,7 +207,7 @@
     let imageUrl = `https://raw.githubusercontent.com/${githubUsername}/${repositoryName}/main/${imageNumber}.jpg`;
 
     // =========================================================================
-    // 4. SPIEL-LOGIK
+    // SPIEL-LOGIK
     // =========================================================================
     const board = document.getElementById("board");
     const timerEl = document.getElementById("timer");
@@ -302,9 +312,6 @@
       }
     }
 
-    // =========================================================================
-    // 5. GLOBALE RANGLISTEN-LOGIK (via npoint.io)
-    // =========================================================================
     function loadGlobalLeaderboard() {
       fetch(`https://api.npoint.io/${npointId}`)
       .then(res => res.json())
