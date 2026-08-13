@@ -105,9 +105,9 @@
       font-weight: bold;
       color: #2e7d32;
       min-height: 24px;
+      font-size: 0.9rem;
     }
 
-    /* BESTENLISTE STYLING */
     .leaderboard {
       margin-top: 20px;
       text-align: left;
@@ -136,9 +136,9 @@
       border-bottom: 1px solid #f0f0f0;
     }
 
-    .leaderboard-item:nth-child(1) { font-weight: bold; color: #d4af37; } /* Gold */
-    .leaderboard-item:nth-child(2) { font-weight: bold; color: #7f8c8d; } /* Silber */
-    .leaderboard-item:nth-child(3) { font-weight: bold; color: #a0522d; } /* Bronze */
+    .leaderboard-item:nth-child(1) { font-weight: bold; color: #d4af37; }
+    .leaderboard-item:nth-child(2) { font-weight: bold; color: #7f8c8d; }
+    .leaderboard-item:nth-child(3) { font-weight: bold; color: #a0522d; }
   </style>
 </head>
 <body>
@@ -158,7 +158,6 @@
     <div id="board"></div>
     <div id="message" class="message-box"></div>
 
-    <!-- GLOBALE BESTENLISTE -->
     <div class="leaderboard">
       <h3>🏆 Globale Wochen-Bestenliste</h3>
       <ol id="leaderboard-list" class="leaderboard-list">
@@ -169,12 +168,12 @@
 
   <script>
     // =========================================================================
-    // 1. ONLINE-SPEICHER ID (dein npoint.io Link ist integriert)
+    // 1. SPEICHER-ENDPOINT (npoint.io)
     // =========================================================================
-    const npointId = "9498b3059b39cb8ddcc2"; 
+    const npointId = "9498b3059b39cb8ddcc2";
 
     // =========================================================================
-    // 2. NAMENS-LOGIK MIT SPEICHERUNG & MANUAL CHANGE
+    // 2. USER-MANAGEMENT
     // =========================================================================
     let currentUser = localStorage.getItem("em_puzzle_username");
 
@@ -204,7 +203,7 @@
     initUser();
 
     // =========================================================================
-    // 3. GITHUB BILDER- & MONTAGS-LOGIK
+    // 3. MONTAGS-LOGIK
     // =========================================================================
     const githubUsername = "David24387"; 
     const repositoryName = "euromaster-puzzle-images";
@@ -251,7 +250,7 @@
       const fallbackImg = new Image();
       fallbackImg.src = masterUrl;
       fallbackImg.onload = () => { imageUrl = masterUrl; initGame(); loadGlobalLeaderboard(); };
-      fallbackImg.onerror = () => { messageEl.innerText = "Fehler beim Laden des Wochenbildes."; };
+      fallbackImg.onerror = () => { messageEl.innerText = "Fehler beim Laden des Bildes."; };
     };
 
     function initGame() {
@@ -326,31 +325,41 @@
       if (isSolved) {
         clearInterval(timerInterval);
         gameFinished = true;
-        messageEl.innerText = `Glückwunsch! Gelöst in ${seconds}s. Speichere Zeit...`;
+        messageEl.style.color = "#2e7d32";
+        messageEl.innerText = `Glückwunsch! Gelöst in ${seconds}s. Speichere...`;
         saveScoreToGlobalLeaderboard(currentUser, seconds, moves);
       }
     }
 
     // =========================================================================
-    // 5. GLOBALE RANGLISTEN-LOGIK (npoint.io)
+    // 5. ROBUSTE RANGLISTEN-SPEICHERUNG
     // =========================================================================
-    function loadGlobalLeaderboard() {
-      fetch(`https://api.npoint.io/${npointId}`)
-      .then(res => res.json())
-      .then(scores => {
-        renderLeaderboard(scores || []);
-      })
-      .catch(err => console.error("Fehler beim Laden der Bestenliste:", err));
+    async function loadGlobalLeaderboard() {
+      try {
+        const response = await fetch(`https://api.npoint.io/${npointId}`);
+        if (!response.ok) throw new Error("Netzwerk-Fehler");
+        const data = await response.json();
+        const scores = Array.isArray(data) ? data : [];
+        renderLeaderboard(scores);
+      } catch (err) {
+        console.error("Ladefehler:", err);
+      }
     }
 
-    function saveScoreToGlobalLeaderboard(name, time, movesCount) {
-      fetch(`https://api.npoint.io/${npointId}`)
-      .then(res => res.json())
-      .then(scores => {
-        let list = Array.isArray(scores) ? scores : [];
+    async function saveScoreToGlobalLeaderboard(name, time, movesCount) {
+      try {
+        // 1. Aktuelle Liste abrufen
+        const response = await fetch(`https://api.npoint.io/${npointId}`);
+        let list = [];
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data)) list = data;
+        }
 
-        const existingIndex = list.findIndex(e => e.name.toLowerCase() === name.toLowerCase());
+        // 2. Prüfen, ob Spieler schon eine Zeit eingetragen hat
+        const existingIndex = list.findIndex(e => e && e.name && e.name.toLowerCase() === name.toLowerCase());
         if (existingIndex !== -1) {
+          // Nur überschreiben, wenn die neue Zeit schneller war
           if (time < list[existingIndex].time) {
             list[existingIndex] = { name, time, moves: movesCount, week: currentWeek };
           }
@@ -358,30 +367,36 @@
           list.push({ name, time, moves: movesCount, week: currentWeek });
         }
 
+        // 3. Nach bester Zeit sortieren
         list.sort((a, b) => a.time - b.time);
 
-        return fetch(`https://api.npoint.io/${npointId}`, {
+        // 4. Liste abspeichern
+        const saveResponse = await fetch(`https://api.npoint.io/${npointId}`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json"
+          },
           body: JSON.stringify(list)
         });
-      })
-      .then(res => res.json())
-      .then(() => {
-        messageEl.innerText = `Glückwunsch, ${name}! Deine Zeit wurde gespeichert.`;
-        loadGlobalLeaderboard();
-      })
-      .catch(err => {
-        console.error("Fehler beim Speichern:", err);
+
+        if (!saveResponse.ok) throw new Error("Fehler beim Senden");
+
+        messageEl.style.color = "#2e7d32";
+        messageEl.innerText = `Glückwunsch, ${name}! Zeit gespeichert.`;
+        renderLeaderboard(list);
+
+      } catch (err) {
+        console.error("Speicherfehler:", err);
+        messageEl.style.color = "#c62828";
         messageEl.innerText = "Fehler beim Speichern der Zeit.";
-      });
+      }
     }
 
     function renderLeaderboard(scores) {
       const listEl = document.getElementById("leaderboard-list");
       listEl.innerHTML = "";
 
-      const currentWeekScores = scores.filter(s => s.week === currentWeek);
+      const currentWeekScores = scores.filter(s => s && s.week === currentWeek);
 
       if (currentWeekScores.length === 0) {
         listEl.innerHTML = '<li style="text-align:center; color:#888; font-size:0.8rem;">Noch keine Zeiten in dieser Woche. Sei der Erste!</li>';
