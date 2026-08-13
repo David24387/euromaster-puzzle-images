@@ -278,6 +278,9 @@
 
             await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
               to_email: ADMIN_EMAIL,
+              email: ADMIN_EMAIL,
+              recipient: ADMIN_EMAIL,
+              user_email: ADMIN_EMAIL,
               week: previousWeek,
               message: messageText
             });
@@ -481,7 +484,7 @@
     }
 
     // =========================================================================
-    // ADMIN-MENÜ MIT ERWEITERTEM EMAILJS-FEHLERLOG
+    // ADMIN-MENÜ MIT ALLEN EMPFÄNGER-PARAMETER-FALLBACKS
     // =========================================================================
     async function openAdminMenu() {
       const pin = prompt("Bitte Admin-PIN eingeben:");
@@ -547,7 +550,7 @@
       }
     }
 
-    // 2. SOFORT-EMAIL FUNKTION MIT VOLLSTÄNDIGER FEHLERANZEIGE
+    // 2. SOFORT-EMAIL FUNKTION
     async function sendLeaderboardEmail() {
       try {
         const res = await fetch(`${FIREBASE_DB_URL}/kw${currentWeek}.json`);
@@ -568,14 +571,18 @@
           messageText += `${index + 1}. ${entry.name} - ${mins}:${secs} (${entry.moves} Züge)\n`;
         });
 
-        // EmailJS Aufruf mit exakter Fehler-Ausgabe
+        // Übergabe von allen gängigen Empfänger-Variablen
         emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
           to_email: ADMIN_EMAIL,
+          email: ADMIN_EMAIL,
+          recipient: ADMIN_EMAIL,
+          user_email: ADMIN_EMAIL,
+          to_name: "David",
           week: currentWeek,
           message: messageText
         }).then(
           function(response) {
-            alert(`✅ E-Mail für KW ${currentWeek} wurde erfolgreich gesendet!`);
+            alert(`✅ E-Mail für KW ${currentWeek} wurde erfolgreich an david.mueller@euromaster.com gesendet!`);
           },
           function(error) {
             console.error("EmailJS Error:", error);
