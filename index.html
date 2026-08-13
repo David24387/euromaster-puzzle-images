@@ -2,14 +2,19 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>EUROMASTER Monday Challenge</title>
   <style>
     :root {
       --primary-color: #003366; /* EUROMASTER Blau */
       --accent-color: #e30613;  /* EUROMASTER Rot */
       --bg-color: #f4f6f9;
-      --board-size: 300px;
+      --board-size: min(300px, 80vw); /* Dynamisch für Mobile */
+    }
+
+    * {
+      box-sizing: border-box;
+      touch-action: manipulation; /* Optimierte Touch-Reaktion */
     }
 
     body {
@@ -19,33 +24,33 @@
       align-items: center;
       background-color: var(--bg-color);
       margin: 0;
-      padding: 15px;
+      padding: 10px;
       color: #333;
     }
 
     .puzzle-container {
       background: #ffffff;
       border-radius: 12px;
-      padding: 20px;
+      padding: 15px;
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
       text-align: center;
-      max-width: 340px;
       width: 100%;
-      box-sizing: border-box;
+      max-width: 360px;
+      position: relative;
     }
 
     h2 {
       color: var(--primary-color);
       margin: 0 0 5px 0;
-      font-size: 1.3rem;
+      font-size: 1.2rem;
     }
 
     .user-badge {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       color: #555;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       background: #eef3f8;
-      padding: 4px 12px;
+      padding: 4px 10px;
       border-radius: 20px;
       display: inline-flex;
       align-items: center;
@@ -66,10 +71,11 @@
       display: flex;
       justify-content: space-around;
       background-color: #f0f4f8;
-      padding: 10px;
+      padding: 8px;
       border-radius: 8px;
-      margin-bottom: 15px;
+      margin-bottom: 12px;
       font-weight: bold;
+      font-size: 0.9rem;
       color: var(--primary-color);
     }
 
@@ -85,39 +91,38 @@
     }
 
     .tile {
-      width: 98px;
-      height: 98px;
+      width: calc(var(--board-size) / 3 - 2px);
+      height: calc(var(--board-size) / 3 - 2px);
       position: absolute;
       border: 1px solid #fff;
       border-radius: 4px;
       cursor: pointer;
-      transition: all 0.2s ease-in-out;
+      transition: all 0.15s ease-in-out;
       background-size: var(--board-size) var(--board-size);
-      box-sizing: border-box;
     }
 
-    .tile:hover {
-      filter: brightness(1.1);
+    .tile:active {
+      transform: scale(0.98);
     }
 
     .message-box {
-      margin-top: 12px;
+      margin-top: 10px;
       font-weight: bold;
       color: #2e7d32;
-      min-height: 24px;
+      min-height: 20px;
       font-size: 0.85rem;
     }
 
     .leaderboard {
-      margin-top: 20px;
+      margin-top: 15px;
       text-align: left;
       border-top: 2px solid #eef3f8;
-      padding-top: 15px;
+      padding-top: 10px;
     }
 
     .leaderboard h3 {
-      margin: 0 0 10px 0;
-      font-size: 1.05rem;
+      margin: 0 0 8px 0;
+      font-size: 1rem;
       color: var(--primary-color);
       text-align: center;
     }
@@ -131,23 +136,35 @@
     .leaderboard-item {
       display: flex;
       justify-content: space-between;
-      padding: 6px 8px;
-      font-size: 0.85rem;
+      padding: 5px 8px;
+      font-size: 0.8rem;
       border-bottom: 1px solid #f0f0f0;
     }
 
     .leaderboard-item:nth-child(1) { font-weight: bold; color: #d4af37; }
     .leaderboard-item:nth-child(2) { font-weight: bold; color: #7f8c8d; }
     .leaderboard-item:nth-child(3) { font-weight: bold; color: #a0522d; }
+
+    /* ADMIN BUTTON STYLING */
+    .admin-trigger {
+      position: absolute;
+      bottom: 5px;
+      right: 8px;
+      background: none;
+      border: none;
+      opacity: 0.3;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
 
   <div class="puzzle-container">
-    <h2>EUROMASTER Monday Challenge</h2>
+    <h2>EUROMASTER Challenge</h2>
     <div class="user-badge">
       <span>Spieler: <strong id="username-display">Lädt...</strong></span>
-      <button class="change-btn" onclick="changeUsername()">(Konto wechseln)</button>
+      <button class="change-btn" onclick="changeUsername()">(Konto)</button>
     </div>
 
     <div class="stats">
@@ -159,22 +176,21 @@
     <div id="message" class="message-box"></div>
 
     <div class="leaderboard">
-      <h3>🏆 Globale Wochen-Bestenliste</h3>
+      <h3 id="leaderboard-title">🏆 Wochen-Bestenliste</h3>
       <ol id="leaderboard-list" class="leaderboard-list">
-        <li style="text-align:center; color:#888; font-size:0.8rem;">Bestenliste wird geladen...</li>
+        <li style="text-align:center; color:#888; font-size:0.8rem;">Lädt...</li>
       </ol>
     </div>
+
+    <!-- Versteckter Admin-Knopf -->
+    <button class="admin-trigger" onclick="openAdminMenu()">⚙️</button>
   </div>
 
   <script>
-    // =========================================================================
-    // 1. FIREBASE DATENBANK-URL (Deine persönliche URL ist eingebunden!)
-    // =========================================================================
     const FIREBASE_DB_URL = "https://euromaster-puzzle-default-rtdb.europe-west1.firebasedatabase.app"; 
+    const ADMIN_PIN = "1234"; // Dein Admin-Passwort zum Löschen/Exportieren
+    const ADMIN_EMAIL = "david.mueller@euromaster.com";
 
-    // =========================================================================
-    // 2. USER-MANAGEMENT
-    // =========================================================================
     let currentUser = localStorage.getItem("em_puzzle_username");
 
     function initUser() {
@@ -186,7 +202,7 @@
     }
 
     function promptForUsername() {
-      const input = prompt("Willkommen zur EUROMASTER Challenge! Bitte gib deinen Namen ein:", currentUser || "");
+      const input = prompt("Willkommen! Bitte gib deinen Namen ein:", currentUser || "");
       if (input && input.trim() !== "") {
         currentUser = input.trim();
         localStorage.setItem("em_puzzle_username", currentUser);
@@ -202,9 +218,7 @@
 
     initUser();
 
-    // =========================================================================
-    // 3. MONTAGS-LOGIK
-    // =========================================================================
+    // MONTAGS-LOGIK
     const githubUsername = "David24387"; 
     const repositoryName = "euromaster-puzzle-images";
     const totalImages = 36;
@@ -217,6 +231,8 @@
     }
 
     const currentWeek = getWeekNumber(new Date());
+    document.getElementById("leaderboard-title").innerText = `🏆 Bestenliste (KW ${currentWeek})`;
+
     const startWeek = 33; 
     let weekIndex = currentWeek - startWeek;
     if (weekIndex < 0) weekIndex += 52;
@@ -224,16 +240,13 @@
     const imageNumber = (weekIndex % totalImages) + 1;
     let imageUrl = `https://raw.githubusercontent.com/${githubUsername}/${repositoryName}/main/${imageNumber}.jpg`;
 
-    // =========================================================================
-    // 4. SPIEL-LOGIK
-    // =========================================================================
+    // SPIEL-LOGIK (MOBILE OPTIMIERT)
     const board = document.getElementById("board");
     const timerEl = document.getElementById("timer");
     const movesEl = document.getElementById("moves");
     const messageEl = document.getElementById("message");
 
     const size = 3;
-    const tileSize = 100;
     let tiles = [];
     let emptyPos = { row: 2, col: 2 };
     let moves = 0;
@@ -256,6 +269,9 @@
     function initGame() {
       board.innerHTML = "";
       tiles = [];
+      const boardWidth = board.clientWidth;
+      const tileSize = boardWidth / size;
+
       for (let r = 0; r < size; r++) {
         for (let c = 0; c < size; c++) {
           if (r === size - 1 && c === size - 1) break;
@@ -267,6 +283,8 @@
           
           const pos = { row: r, col: c, correctRow: r, correctCol: c, element: tile };
           tiles.push(pos);
+          
+          // Responsive Touch & Click Handling
           tile.addEventListener("click", () => moveTile(pos));
           board.appendChild(tile);
           updatePosition(pos);
@@ -276,6 +294,8 @@
     }
 
     function updatePosition(tile) {
+      const boardWidth = board.clientWidth;
+      const tileSize = boardWidth / size;
       tile.element.style.top = `${tile.row * tileSize}px`;
       tile.element.style.left = `${tile.col * tileSize}px`;
     }
@@ -331,21 +351,21 @@
       }
     }
 
-    // =========================================================================
-    // 5. GLOBALE SPEICHERUNG VIA FIREBASE REALTIME DATABASE
-    // =========================================================================
+    // FIREBASE SPEICHERUNG & ABFRAGE
+    let cachedScores = [];
+
     async function loadGlobalLeaderboard() {
       try {
         const response = await fetch(`${FIREBASE_DB_URL}/kw${currentWeek}.json`);
         if (!response.ok) throw new Error("Load Fail");
         const data = await response.json();
         
-        let scores = [];
+        cachedScores = [];
         if (data) {
-          scores = Object.values(data);
-          scores.sort((a, b) => a.time - b.time);
+          cachedScores = Object.values(data);
+          cachedScores.sort((a, b) => a.time - b.time);
         }
-        renderLeaderboard(scores);
+        renderLeaderboard(cachedScores);
       } catch (err) {
         console.error("Ladefehler:", err);
       }
@@ -390,7 +410,7 @@
       listEl.innerHTML = "";
 
       if (scores.length === 0) {
-        listEl.innerHTML = '<li style="text-align:center; color:#888; font-size:0.8rem;">Noch keine Zeiten in dieser Woche. Sei der Erste!</li>';
+        listEl.innerHTML = '<li style="text-align:center; color:#888; font-size:0.8rem;">Noch keine Zeiten in dieser Woche.</li>';
         return;
       }
 
@@ -407,6 +427,61 @@
         `;
         listEl.appendChild(li);
       });
+    }
+
+    // ADMIN-FUNKTIONEN (LÖSCHEN & REPORT PER MAIL)
+    function openAdminMenu() {
+      const pin = prompt("Bitte Admin-PIN eingeben:");
+      if (pin !== ADMIN_PIN) {
+        alert("Falsche PIN!");
+        return;
+      }
+
+      const action = confirm(
+        "ADMIN MENU:\n\n" +
+        "• OK drücken = Bericht per E-Mail erzeugen & senden\n" +
+        "• Abbrechen = Aktuelle Wochen-Rangliste LÖSCHEN"
+      );
+
+      if (action) {
+        // Mail erzeugen
+        sendReportMail();
+      } else {
+        // Rangliste löschen
+        const confirmDelete = confirm(`Bist du sicher, dass du die Rangliste von KW ${currentWeek} löschen willst?`);
+        if (confirmDelete) {
+          deleteCurrentLeaderboard();
+        }
+      }
+    }
+
+    function sendReportMail() {
+      if (cachedScores.length === 0) {
+        alert("Keine Daten zum Versenden vorhanden.");
+        return;
+      }
+
+      let bodyText = `Hallo David,%0D%0A%0D%0AHier ist die Auswertung der EUROMASTER Monday Challenge für KW ${currentWeek}:%0D%0A%0D%0A`;
+      
+      cachedScores.forEach((entry, index) => {
+        const mins = String(Math.floor(entry.time / 60)).padStart(2, '0');
+        const secs = String(entry.time % 60).padStart(2, '0');
+        bodyText += `${index + 1}. ${entry.name} - ${mins}:${secs} (${entry.moves} Züge)%0D%0A`;
+      });
+
+      bodyText += `%0D%0AViele Grüße%0D%0ADEIN PUZZLE WIDGET`;
+
+      window.location.href = `mailto:${ADMIN_EMAIL}?subject=Rangliste EUROMASTER Challenge KW ${currentWeek}&body=${bodyText}`;
+    }
+
+    async function deleteCurrentLeaderboard() {
+      try {
+        await fetch(`${FIREBASE_DB_URL}/kw${currentWeek}.json`, { method: "DELETE" });
+        alert(`Rangliste für KW ${currentWeek} wurde gelöscht!`);
+        loadGlobalLeaderboard();
+      } catch (err) {
+        alert("Fehler beim Löschen der Rangliste.");
+      }
     }
   </script>
 </body>
