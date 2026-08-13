@@ -168,10 +168,9 @@
 
   <script>
     // =========================================================================
-    // 1. ZENTRALER SPEICHER-ENDPOINT (JSONBin V3 - Öffentlicher Master Bin)
+    // 1. FIREBASE DATENBANK-URL (Deine persönliche URL ist eingebunden!)
     // =========================================================================
-    const BIN_ID = "65ccdb61dc74654018a594ed"; 
-    const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+    const FIREBASE_DB_URL = "https://euromaster-puzzle-default-rtdb.europe-west1.firebasedatabase.app"; 
 
     // =========================================================================
     // 2. USER-MANAGEMENT
@@ -333,16 +332,19 @@
     }
 
     // =========================================================================
-    // 5. FEHLERFREIE SPEICHERUNG (JSONBin PUT Mechanism)
+    // 5. GLOBALE SPEICHERUNG VIA FIREBASE REALTIME DATABASE
     // =========================================================================
     async function loadGlobalLeaderboard() {
       try {
-        const response = await fetch(`${API_URL}/latest`, {
-          headers: { "X-Bin-Meta": "false" }
-        });
+        const response = await fetch(`${FIREBASE_DB_URL}/kw${currentWeek}.json`);
         if (!response.ok) throw new Error("Load Fail");
         const data = await response.json();
-        const scores = Array.isArray(data) ? data : [];
+        
+        let scores = [];
+        if (data) {
+          scores = Object.values(data);
+          scores.sort((a, b) => a.time - b.time);
+        }
         renderLeaderboard(scores);
       } catch (err) {
         console.error("Ladefehler:", err);
@@ -351,49 +353,35 @@
 
     async function saveScoreToGlobalLeaderboard(name, time, movesCount) {
       try {
-        // 1. Aktuelle Daten abrufen
-        const getRes = await fetch(`${API_URL}/latest`, {
-          headers: { "X-Bin-Meta": "false" }
-        });
-        
-        let list = [];
-        if (getRes.ok) {
-          const data = await getRes.json();
-          if (Array.isArray(data)) list = data;
-        }
+        const safeUserId = name.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
+        const userUrl = `${FIREBASE_DB_URL}/kw${currentWeek}/${safeUserId}.json`;
 
-        // 2. Prüfen ob Spieler vorhanden
-        const existingIndex = list.findIndex(e => e && e.name && e.name.toLowerCase() === name.toLowerCase());
-        if (existingIndex !== -1) {
-          if (time < list[existingIndex].time) {
-            list[existingIndex] = { name, time, moves: movesCount, week: currentWeek };
+        const checkRes = await fetch(userUrl);
+        let shouldSave = true;
+
+        if (checkRes.ok) {
+          const existingData = await checkRes.json();
+          if (existingData && existingData.time <= time) {
+            shouldSave = false;
           }
-        } else {
-          list.push({ name, time, moves: movesCount, week: currentWeek });
         }
 
-        // Sortieren
-        list.sort((a, b) => a.time - b.time);
-
-        // 3. Abspeichern per PUT Request
-        const putRes = await fetch(API_URL, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(list)
-        });
-
-        if (!putRes.ok) throw new Error("Save Fail");
+        if (shouldSave) {
+          await fetch(userUrl, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, time, moves: movesCount })
+          });
+        }
 
         messageEl.style.color = "#2e7d32";
-        messageEl.innerText = `Glückwunsch, ${name}! Zeit wurde gespeichert.`;
-        renderLeaderboard(list);
+        messageEl.innerText = `Glückwunsch, ${name}! Zeit gespeichert.`;
+        loadGlobalLeaderboard();
 
       } catch (err) {
         console.error("Speicherfehler:", err);
         messageEl.style.color = "#c62828";
-        messageEl.innerText = "Fehler beim Speichern. Bitte erneut versuchen.";
+        messageEl.innerText = "Fehler beim Speichern der Zeit.";
       }
     }
 
@@ -401,14 +389,12 @@
       const listEl = document.getElementById("leaderboard-list");
       listEl.innerHTML = "";
 
-      const currentWeekScores = scores.filter(s => s && s.week === currentWeek);
-
-      if (currentWeekScores.length === 0) {
+      if (scores.length === 0) {
         listEl.innerHTML = '<li style="text-align:center; color:#888; font-size:0.8rem;">Noch keine Zeiten in dieser Woche. Sei der Erste!</li>';
         return;
       }
 
-      currentWeekScores.slice(0, 5).forEach((entry, index) => {
+      scores.slice(0, 5).forEach((entry, index) => {
         const li = document.createElement("li");
         li.className = "leaderboard-item";
         
