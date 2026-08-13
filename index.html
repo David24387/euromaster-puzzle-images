@@ -7,7 +7,7 @@
   <style>
     :root {
       --primary-color: #003366; /* EUROMASTER Blau */
-      --accent-color: #e30613;  /* Akzentfarbe */
+      --accent-color: #e30613;  /* EUROMASTER Rot */
       --bg-color: #f4f6f9;
       --board-size: 300px;      /* Gesamtgröße des Spielfelds */
     }
@@ -109,14 +109,14 @@
 
   <script>
     // =========================================================================
-    // 1. GITHUB KONFIGURATION (Hier Ihre Daten anpassen!)
+    // 1. GITHUB KONFIGURATION
     // =========================================================================
-    const githubUsername = "DEIN_GITHUB_USERNAME"; // Ihr GitHub-Nutzername
-    const repositoryName = "euromaster-puzzle-images"; // Repo-Name
-    const totalImages = 50; // Anzahl der hochgeladenen Bilder (1.jpg, 2.jpg ...)
+    const githubUsername = "David24387"; 
+    const repositoryName = "euromaster-puzzle-images";
+    const totalImages = 36; // Deine 36 hochgeladenen Bilder (1.jpg bis 36.jpg)
 
     // =========================================================================
-    // 2. MONTAGS-LOGIK (Berechnet das Bild anhand der Kalenderwoche)
+    // 2. MONTAGS-LOGIK (Startet jetzt in KW 33 mit Bild 1.jpg)
     // =========================================================================
     function getWeekNumber(d) {
       d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -126,8 +126,16 @@
     }
 
     const currentWeek = getWeekNumber(new Date());
-    const imageNumber = ((currentWeek - 1) % totalImages) + 1;
-    const imageUrl = `https://raw.githubusercontent.com/${githubUsername}/${repositoryName}/main/${imageNumber}.jpg`;
+    const startWeek = 33; // Aktuelle Kalenderwoche (Startwoche)
+    
+    let weekIndex = currentWeek - startWeek;
+    if (weekIndex < 0) weekIndex += 52; // Jahreswechsel berücksichtigen
+
+    // Errechnet die Bildnummer (1 bis 36)
+    const imageNumber = (weekIndex % totalImages) + 1;
+
+    // Bild-URL über GitHub Raw CDN
+    let imageUrl = `https://raw.githubusercontent.com/${githubUsername}/${repositoryName}/main/${imageNumber}.jpg`;
 
     // =========================================================================
     // 3. SPIEL-VARIABLEN & INITIALISIERUNG
@@ -147,13 +155,27 @@
     let gameStarted = false;
     let gameFinished = false;
 
-    // Bild vorladen & Spiel starten
+    // Bild vorladen & Fallback auf 'master'-Branch falls 'main' fehlschlägt
     const puzzleImg = new Image();
     puzzleImg.src = imageUrl;
+    
     puzzleImg.onload = () => initGame();
+    
     puzzleImg.onerror = () => {
-      messageEl.style.color = "#c62828";
-      messageEl.innerText = "Fehler beim Laden des Wochenbilds.";
+      // Zweiter Versuch über 'master' statt 'main'
+      const masterUrl = `https://raw.githubusercontent.com/${githubUsername}/${repositoryName}/master/${imageNumber}.jpg`;
+      const fallbackImg = new Image();
+      fallbackImg.src = masterUrl;
+      
+      fallbackImg.onload = () => {
+        imageUrl = masterUrl;
+        initGame();
+      };
+      
+      fallbackImg.onerror = () => {
+        messageEl.style.color = "#c62828";
+        messageEl.innerText = `Fehler beim Laden von Bild ${imageNumber}.jpg. Prüfe ob das Bild '1.jpg' im Repository existiert!`;
+      };
     };
 
     function initGame() {
@@ -213,7 +235,6 @@
     }
 
     function shuffle() {
-      // 100 zufällige gültige Züge ausführen zum Mischen
       for (let i = 0; i < 100; i++) {
         const validTiles = tiles.filter(t => 
           (Math.abs(t.row - emptyPos.row) + Math.abs(t.col - emptyPos.col)) === 1
@@ -240,7 +261,7 @@
     }
 
     // =========================================================================
-    // 5. GEWINN-PRÜFUNG & MASTERNET BACKEND-ANBINDUNG
+    // 5. GEWINN-PRÜFUNG & BACKEND-SCHNITTSTELLE
     // =========================================================================
     function checkWin() {
       const isSolved = tiles.every(t => t.row === t.correctRow && t.col === t.correctCol);
@@ -250,29 +271,12 @@
 
         messageEl.innerText = `Glückwunsch! Gelöst in ${seconds} Sek. (${moves} Züge)`;
 
-        // Ergebnisse an das Masternet senden
         sendScoreToMasternet(seconds, moves);
       }
     }
 
     function sendScoreToMasternet(timeInSeconds, totalMoves) {
-      console.log("Sende Daten an Masternet...", { timeInSeconds, totalMoves });
-
-      /* 
-        BEISPIEL FÜR API-ANBINDUNG AN IHR MASTERNET:
-
-        fetch('/api/monday-challenge/score', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            week: currentWeek,
-            time: timeInSeconds,
-            moves: totalMoves
-          })
-        }).then(response => {
-          console.log("Score erfolgreich gespeichert!");
-        });
-      */
+      console.log("Ergebnis an Masternet senden:", { timeInSeconds, totalMoves });
     }
   </script>
 </body>
