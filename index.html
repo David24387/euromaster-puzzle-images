@@ -9,12 +9,12 @@
       --primary-color: #003366; /* EUROMASTER Blau */
       --accent-color: #e30613;  /* EUROMASTER Rot */
       --bg-color: #f4f6f9;
-      --board-size: min(300px, 80vw); /* Dynamisch für Mobile */
+      --board-size: min(300px, 80vw);
     }
 
     * {
       box-sizing: border-box;
-      touch-action: manipulation; /* Optimierte Touch-Reaktion */
+      touch-action: manipulation;
     }
 
     body {
@@ -145,7 +145,6 @@
     .leaderboard-item:nth-child(2) { font-weight: bold; color: #7f8c8d; }
     .leaderboard-item:nth-child(3) { font-weight: bold; color: #a0522d; }
 
-    /* ADMIN BUTTON STYLING */
     .admin-trigger {
       position: absolute;
       bottom: 5px;
@@ -156,6 +155,37 @@
       font-size: 0.8rem;
       cursor: pointer;
     }
+
+    /* ADMIN POPUP STYLING */
+    .admin-modal {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 12px;
+      padding: 20px;
+      flex-direction: column;
+      justify-content: center;
+      gap: 12px;
+      box-sizing: border-box;
+      z-index: 10;
+    }
+
+    .admin-btn {
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    .admin-btn-mail { background-color: var(--primary-color); color: #fff; }
+    .admin-btn-delete { background-color: var(--accent-color); color: #fff; }
+    .admin-btn-close { background-color: #ccc; color: #333; }
   </style>
 </head>
 <body>
@@ -182,13 +212,20 @@
       </ol>
     </div>
 
-    <!-- Versteckter Admin-Knopf -->
     <button class="admin-trigger" onclick="openAdminMenu()">⚙️</button>
+
+    <!-- KLARES ADMIN PANEL -->
+    <div id="admin-modal" class="admin-modal">
+      <h3 style="margin: 0; color: var(--primary-color);">Admin-Bereich</h3>
+      <button class="admin-btn admin-btn-mail" onclick="sendReportMail()">📧 Bericht per Mail senden</button>
+      <button class="admin-btn admin-btn-delete" onclick="deleteCurrentLeaderboard()">🗑️ Rangliste dieser Woche löschen</button>
+      <button class="admin-btn admin-btn-close" onclick="closeAdminMenu()">Schließen</button>
+    </div>
   </div>
 
   <script>
     const FIREBASE_DB_URL = "https://euromaster-puzzle-default-rtdb.europe-west1.firebasedatabase.app"; 
-    const ADMIN_PIN = "1234"; // Dein Admin-Passwort zum Löschen/Exportieren
+    const ADMIN_PIN = "1234";
     const ADMIN_EMAIL = "david.mueller@euromaster.com";
 
     let currentUser = localStorage.getItem("em_puzzle_username");
@@ -240,7 +277,7 @@
     const imageNumber = (weekIndex % totalImages) + 1;
     let imageUrl = `https://raw.githubusercontent.com/${githubUsername}/${repositoryName}/main/${imageNumber}.jpg`;
 
-    // SPIEL-LOGIK (MOBILE OPTIMIERT)
+    // SPIEL-LOGIK
     const board = document.getElementById("board");
     const timerEl = document.getElementById("timer");
     const movesEl = document.getElementById("moves");
@@ -284,7 +321,6 @@
           const pos = { row: r, col: c, correctRow: r, correctCol: c, element: tile };
           tiles.push(pos);
           
-          // Responsive Touch & Click Handling
           tile.addEventListener("click", () => moveTile(pos));
           board.appendChild(tile);
           updatePosition(pos);
@@ -429,39 +465,27 @@
       });
     }
 
-    // ADMIN-FUNKTIONEN (LÖSCHEN & REPORT PER MAIL)
+    // ADMIN-PANEL LOGIK
     function openAdminMenu() {
       const pin = prompt("Bitte Admin-PIN eingeben:");
-      if (pin !== ADMIN_PIN) {
+      if (pin === ADMIN_PIN) {
+        document.getElementById("admin-modal").style.display = "flex";
+      } else if (pin !== null) {
         alert("Falsche PIN!");
-        return;
       }
+    }
 
-      const action = confirm(
-        "ADMIN MENU:\n\n" +
-        "• OK drücken = Bericht per E-Mail erzeugen & senden\n" +
-        "• Abbrechen = Aktuelle Wochen-Rangliste LÖSCHEN"
-      );
-
-      if (action) {
-        // Mail erzeugen
-        sendReportMail();
-      } else {
-        // Rangliste löschen
-        const confirmDelete = confirm(`Bist du sicher, dass du die Rangliste von KW ${currentWeek} löschen willst?`);
-        if (confirmDelete) {
-          deleteCurrentLeaderboard();
-        }
-      }
+    function closeAdminMenu() {
+      document.getElementById("admin-modal").style.display = "none";
     }
 
     function sendReportMail() {
       if (cachedScores.length === 0) {
-        alert("Keine Daten zum Versenden vorhanden.");
+        alert("Keine Daten für KW " + currentWeek + " vorhanden.");
         return;
       }
 
-      let bodyText = `Hallo David,%0D%0A%0D%0AHier ist die Auswertung der EUROMASTER Monday Challenge für KW ${currentWeek}:%0D%0A%0D%0A`;
+      let bodyText = `Hallo David,%0D%0A%0D%0AHier ist die Auswertung der EUROMASTER Challenge für KW ${currentWeek}:%0D%0A%0D%0A`;
       
       cachedScores.forEach((entry, index) => {
         const mins = String(Math.floor(entry.time / 60)).padStart(2, '0');
@@ -471,16 +495,21 @@
 
       bodyText += `%0D%0AViele Grüße%0D%0ADEIN PUZZLE WIDGET`;
 
+      // Öffnet die Mail-Anwendung
       window.location.href = `mailto:${ADMIN_EMAIL}?subject=Rangliste EUROMASTER Challenge KW ${currentWeek}&body=${bodyText}`;
     }
 
     async function deleteCurrentLeaderboard() {
-      try {
-        await fetch(`${FIREBASE_DB_URL}/kw${currentWeek}.json`, { method: "DELETE" });
-        alert(`Rangliste für KW ${currentWeek} wurde gelöscht!`);
-        loadGlobalLeaderboard();
-      } catch (err) {
-        alert("Fehler beim Löschen der Rangliste.");
+      const confirmDelete = confirm(`Möchtest du die Rangliste für KW ${currentWeek} wirklich unwiderruflich löschen?`);
+      if (confirmDelete) {
+        try {
+          await fetch(`${FIREBASE_DB_URL}/kw${currentWeek}.json`, { method: "DELETE" });
+          alert(`Rangliste für KW ${currentWeek} wurde erfolgreich gelöscht!`);
+          closeAdminMenu();
+          loadGlobalLeaderboard();
+        } catch (err) {
+          alert("Fehler beim Löschen der Rangliste.");
+        }
       }
     }
   </script>
