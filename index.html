@@ -193,9 +193,7 @@
     const ADMIN_PIN = "1234";
     const ADMIN_EMAIL = "david.mueller@euromaster.com";
 
-    // =========================================================================
     // EMAILJS KONFIGURATION
-    // =========================================================================
     const EMAILJS_SERVICE_ID = "service_rxqnr17"; 
     const EMAILJS_TEMPLATE_ID = "template_8ull2qz"; 
     const EMAILJS_PUBLIC_KEY = "RwghX8zwGJmnieBNo";
@@ -270,18 +268,18 @@
             let scores = Object.values(data);
             scores.sort((a, b) => a.time - b.time);
 
-            let message = `Hallo David,\n\nhier ist die automatische Auswertung der EUROMASTER Challenge für KW ${previousWeek}:\n\n`;
+            let messageText = `Hallo David,\n\nhier ist die automatische Auswertung der EUROMASTER Challenge für KW ${previousWeek}:\n\n`;
             scores.forEach((entry, index) => {
               const mins = String(Math.floor(entry.time / 60)).padStart(2, '0');
               const secs = String(entry.time % 60).padStart(2, '0');
-              message += `${index + 1}. ${entry.name} - ${mins}:${secs} (${entry.moves} Züge)\n`;
+              messageText += `${index + 1}. ${entry.name} - ${mins}:${secs} (${entry.moves} Züge)\n`;
             });
-            message += `\nViele Grüße\nDein Puzzle Widget`;
+            messageText += `\nViele Grüße\nDein Puzzle Widget`;
 
             await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
               to_email: ADMIN_EMAIL,
               week: previousWeek,
-              message: message
+              message: messageText
             });
 
             await fetch(`${FIREBASE_DB_URL}/meta/last_sent_week.json`, {
@@ -483,7 +481,7 @@
     }
 
     // =========================================================================
-    // ADMIN-MENÜ MIT DOWNLOAD, EMAIL & LÖSCHEN
+    // ADMIN-MENÜ MIT ERWEITERTEM EMAILJS-FEHLERLOG
     // =========================================================================
     async function openAdminMenu() {
       const pin = prompt("Bitte Admin-PIN eingeben:");
@@ -549,7 +547,7 @@
       }
     }
 
-    // 2. SOFORT-EMAIL FUNKTION
+    // 2. SOFORT-EMAIL FUNKTION MIT VOLLSTÄNDIGEM ERROR-HANDLING
     async function sendLeaderboardEmail() {
       try {
         const res = await fetch(`${FIREBASE_DB_URL}/kw${currentWeek}.json`);
@@ -563,25 +561,25 @@
         let scores = Object.values(data);
         scores.sort((a, b) => a.time - b.time);
 
-        let message = `Manuelle Auswertung der EUROMASTER Challenge für KW ${currentWeek}:\n\n`;
+        let messageText = `Manuelle Auswertung der EUROMASTER Challenge für KW ${currentWeek}:\n\n`;
         scores.forEach((entry, index) => {
           const mins = String(Math.floor(entry.time / 60)).padStart(2, '0');
           const secs = String(entry.time % 60).padStart(2, '0');
-          message += `${index + 1}. ${entry.name} - ${mins}:${secs} (${entry.moves} Züge)\n`;
+          messageText += `${index + 1}. ${entry.name} - ${mins}:${secs} (${entry.moves} Züge)\n`;
         });
 
-        alert("Sende E-Mail...");
-
-        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        // E-Mail senden mit erweiterten Parametern
+        const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
           to_email: ADMIN_EMAIL,
           week: currentWeek,
-          message: message
+          message: messageText
         });
 
-        alert(`E-Mail für KW ${currentWeek} wurde erfolgreich an ${ADMIN_EMAIL} gesendet!`);
+        alert(`E-Mail für KW ${currentWeek} wurde erfolgreich gesendet!`);
+
       } catch (err) {
-        console.error("E-Mail Fehler:", err);
-        alert("Fehler beim Senden der E-Mail.");
+        console.error("E-Mail Fehler Details:", err);
+        alert(`Fehler beim Senden der E-Mail:\n${err.text || err.message || JSON.stringify(err)}`);
       }
     }
   </script>
