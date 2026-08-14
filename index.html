@@ -13,7 +13,7 @@
       --primary-color: #003366; /* EUROMASTER Blau */
       --accent-color: #e30613;  /* EUROMASTER Rot */
       --bg-color: #f4f6f9;
-      --board-size: min(300px, 80vw);
+      --board-size: 300px; /* Feste Standardbreite für optimale Darstellung */
     }
 
     * {
@@ -39,7 +39,7 @@
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
       text-align: center;
       width: 100%;
-      max-width: 360px;
+      max-width: 340px;
       position: relative;
     }
 
@@ -95,14 +95,12 @@
     }
 
     .tile {
-      width: calc(var(--board-size) / 3 - 2px);
-      height: calc(var(--board-size) / 3 - 2px);
       position: absolute;
       border: 1px solid #fff;
       border-radius: 4px;
       cursor: pointer;
       transition: all 0.15s ease-in-out;
-      background-size: var(--board-size) var(--board-size);
+      background-repeat: no-repeat;
     }
 
     .tile:active {
@@ -294,7 +292,7 @@
       }
     }
 
-    // SPIEL-LOGIK
+    // SPIEL-LOGIK (SAUBER KACHEL-BERECHUNG)
     const board = document.getElementById("board");
     const timerEl = document.getElementById("timer");
     const movesEl = document.getElementById("moves");
@@ -323,7 +321,7 @@
     function initGame() {
       board.innerHTML = "";
       tiles = [];
-      const boardWidth = board.clientWidth;
+      const boardWidth = board.clientWidth || 300;
       const tileSize = boardWidth / size;
 
       for (let r = 0; r < size; r++) {
@@ -332,7 +330,12 @@
 
           const tile = document.createElement("div");
           tile.classList.add("tile");
+          tile.style.width = `${tileSize}px`;
+          tile.style.height = `${tileSize}px`;
           tile.style.backgroundImage = `url('${imageUrl}')`;
+          
+          // Exakte Ausrichtung des Hintergrunds für JEDE Kachel
+          tile.style.backgroundSize = `${boardWidth}px ${boardWidth}px`;
           tile.style.backgroundPosition = `-${c * tileSize}px -${r * tileSize}px`;
           
           const pos = { row: r, col: c, correctRow: r, correctCol: c, element: tile };
@@ -347,7 +350,7 @@
     }
 
     function updatePosition(tile) {
-      const boardWidth = board.clientWidth;
+      const boardWidth = board.clientWidth || 300;
       const tileSize = boardWidth / size;
       tile.element.style.top = `${tile.row * tileSize}px`;
       tile.element.style.left = `${tile.col * tileSize}px`;
@@ -480,9 +483,7 @@
       });
     }
 
-    // =========================================================================
     // ADMIN-MENÜ
-    // =========================================================================
     async function openAdminMenu() {
       const pin = prompt("Bitte Admin-PIN eingeben:");
       if (pin !== ADMIN_PIN) {
@@ -512,7 +513,6 @@
       }
     }
 
-    // 1. CSV-DOWNLOAD FUNKTION
     async function downloadLeaderboardCSV() {
       try {
         const res = await fetch(`${FIREBASE_DB_URL}/kw${currentWeek}.json`);
@@ -547,7 +547,6 @@
       }
     }
 
-    // 2. SOFORT-EMAIL FUNKTION
     async function sendLeaderboardEmail() {
       try {
         const res = await fetch(`${FIREBASE_DB_URL}/kw${currentWeek}.json`);
@@ -574,18 +573,17 @@
           message: messageText
         }).then(
           function(response) {
-            alert(`✅ E-Mail für KW ${currentWeek} wurde erfolgreich an ${ADMIN_EMAIL} gesendet!`);
+            alert(`✅ E-Mail für KW ${currentWeek} wurde erfolgreich gesendet!`);
           },
           function(error) {
             console.error("EmailJS Error:", error);
-            const errDetails = error.text || error.message || JSON.stringify(error);
-            alert(`❌ EmailJS Fehler:\n\n${errDetails}\n\nHinweis: Stelle bitte auf emailjs.com im Template 'template_8ull2qz' im Feld 'To Email' fest deine E-Mail-Adresse ein.`);
+            alert(`❌ EmailJS Fehler beim Senden.`);
           }
         );
 
       } catch (err) {
         console.error("Allgemeiner Fehler:", err);
-        alert(`❌ Fehler beim Abrufen der Daten:\n${err.message}`);
+        alert(`❌ Fehler beim Abrufen der Daten.`);
       }
     }
   </script>
