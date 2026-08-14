@@ -77,10 +77,9 @@
       padding: 0;
     }
 
-    /* RESPONSIVE LAYOUT CONTAINER */
     .main-content {
       display: flex;
-      flex-direction: column; /* Standard: Untereinander (Mobile) */
+      flex-direction: column;
       align-items: center;
       gap: 15px;
       width: 100%;
@@ -185,16 +184,13 @@
       cursor: pointer;
     }
 
-    /* =========================================================================
-       DESKTOP OPTIMIERUNG (AB 650px BREITE): NEBENEINANDER LOGIK
-       ========================================================================= */
     @media (min-width: 650px) {
       .puzzle-container {
-        max-width: 680px; /* Erweitert die Karte für Desktop */
+        max-width: 680px;
       }
 
       .main-content {
-        flex-direction: row; /* Nebeneinander anordnen */
+        flex-direction: row;
         align-items: flex-start;
         justify-content: center;
         gap: 25px;
@@ -206,8 +202,8 @@
 
       .leaderboard {
         width: 280px;
-        border-top: none; /* Kein Trennstrich oben nötig */
-        border-left: 2px solid #eef3f8; /* Trennstrich links zur Trennung */
+        border-top: none;
+        border-left: 2px solid #eef3f8;
         padding-top: 0;
         padding-left: 20px;
       }
@@ -226,7 +222,6 @@
     </div>
 
     <div class="main-content">
-      <!-- LINKE SEITE (DESKTOP): SPIEL & STATS -->
       <div class="game-section">
         <div class="stats">
           <div>Zeit: <span id="timer">00:00</span></div>
@@ -237,7 +232,6 @@
         <div id="message" class="message-box"></div>
       </div>
 
-      <!-- RECHTE SEITE (DESKTOP) / UNTEN (MOBILE): BESTENLISTE -->
       <div class="leaderboard">
         <h3 id="leaderboard-title">🏆 Wochen-Bestenliste</h3>
         <ol id="leaderboard-list" class="leaderboard-list">
@@ -261,22 +255,13 @@
 
     emailjs.init(EMAILJS_PUBLIC_KEY);
 
-    // USER-MANAGEMENT
-    let currentUser = localStorage.getItem("em_puzzle_username");
-
-    function initUser() {
-      if (!currentUser || currentUser.trim() === "") {
-        promptForUsername();
-      } else {
-        document.getElementById("username-display").innerText = currentUser;
-      }
-    }
+    // USER-MANAGEMENT (OHNE LOCALSTORAGE = BEIM SEITENAUFRUF IMMER FRAGEN)
+    let currentUser = "";
 
     function promptForUsername() {
-      const input = prompt("Willkommen! Bitte gib deinen Namen ein:", currentUser || "");
+      const input = prompt("Willkommen zur EUROMASTER Challenge!\nBitte gib deinen Namen ein:", currentUser || "");
       if (input && input.trim() !== "") {
         currentUser = input.trim();
-        localStorage.setItem("em_puzzle_username", currentUser);
       } else if (!currentUser) {
         currentUser = "Anonym";
       }
@@ -285,9 +270,8 @@
 
     function changeUsername() {
       promptForUsername();
+      resetGame(); // Startet das Spiel direkt für den neuen Namen neu!
     }
-
-    initUser();
 
     // MONTAGS-LOGIK & BILD-WECHSEL
     const githubUsername = "David24387"; 
@@ -370,6 +354,9 @@
     let gameStarted = false;
     let gameFinished = false;
 
+    // NAMENSABFRAGE VOR DEM LADEN DES SPIELS
+    promptForUsername();
+
     const puzzleImg = new Image();
     puzzleImg.src = imageUrl;
     puzzleImg.onload = () => { initGame(); loadGlobalLeaderboard(); };
@@ -409,6 +396,20 @@
         }
       }
       shuffle();
+    }
+
+    // RESTART-FUNKTION BEIM NAMENSWECHSEL
+    function resetGame() {
+      clearInterval(timerInterval);
+      gameStarted = false;
+      gameFinished = false;
+      seconds = 0;
+      moves = 0;
+      timerEl.innerText = "00:00";
+      movesEl.innerText = "0";
+      messageEl.innerText = "";
+      emptyPos = { row: 2, col: 2 };
+      initGame();
     }
 
     function updatePosition(tile) {
