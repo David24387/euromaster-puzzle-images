@@ -184,6 +184,80 @@
       cursor: pointer;
     }
 
+    /* EIGENES POPUP / MODAL (EUROMASTER STYLE) */
+    .custom-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .custom-modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .custom-modal {
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 300px;
+      text-align: center;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    }
+
+    .custom-modal h3 {
+      margin: 0 0 10px 0;
+      color: var(--primary-color);
+      font-size: 1.1rem;
+    }
+
+    .custom-modal p {
+      font-size: 0.85rem;
+      color: #666;
+      margin: 0 0 15px 0;
+    }
+
+    .custom-modal input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1.5px solid #ccc;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      margin-bottom: 15px;
+      outline: none;
+    }
+
+    .custom-modal input:focus {
+      border-color: var(--primary-color);
+    }
+
+    .custom-modal button {
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      font-size: 0.9rem;
+    }
+
+    .custom-modal button:hover {
+      background: #002244;
+    }
+
     @media (min-width: 650px) {
       .puzzle-container {
         max-width: 680px;
@@ -217,7 +291,7 @@
       <h2>EUROMASTER Challenge</h2>
       <div class="user-badge">
         <span>Spieler: <strong id="username-display">Lädt...</strong></span>
-        <button class="change-btn" onclick="changeUsername()">(Konto)</button>
+        <button class="change-btn" onclick="openNameModal()">(Konto)</button>
       </div>
     </div>
 
@@ -243,6 +317,16 @@
     <button class="admin-trigger" onclick="openAdminMenu()">⚙️</button>
   </div>
 
+  <!-- EIGENER POPUP-DIALOG OHNE LINK-ANZEIGE -->
+  <div id="name-modal" class="custom-modal-overlay">
+    <div class="custom-modal">
+      <h3>Willkommen!</h3>
+      <p>Bitte gib deinen Namen ein:</p>
+      <input type="text" id="modal-username-input" placeholder="Vorname Nachname" maxlength="25" />
+      <button onclick="saveNameFromModal()">Spiel starten</button>
+    </div>
+  </div>
+
   <script>
     const FIREBASE_DB_URL = "https://euromaster-puzzle-default-rtdb.europe-west1.firebasedatabase.app"; 
     const ADMIN_PIN = "1234";
@@ -255,32 +339,41 @@
 
     emailjs.init(EMAILJS_PUBLIC_KEY);
 
-    // USER-MANAGEMENT (MERKT SICH DEN NAMEN, ERFRAGT IHN NUR BEIM ERSTEN MAL)
-    let currentUser = localStorage.getItem("em_puzzle_username");
+    // USER-MANAGEMENT MIT SAUBEREM MODAL
+    let currentUser = localStorage.getItem("em_puzzle_username") || "";
 
     function initUser() {
       if (!currentUser || currentUser.trim() === "") {
-        promptForUsername();
+        openNameModal();
       } else {
         document.getElementById("username-display").innerText = currentUser;
       }
     }
 
-    function promptForUsername() {
-      const input = prompt("Willkommen zur EUROMASTER Challenge!\nBitte gib deinen Namen ein:", currentUser || "");
-      if (input && input.trim() !== "") {
-        currentUser = input.trim();
-        localStorage.setItem("em_puzzle_username", currentUser);
-      } else if (!currentUser) {
-        currentUser = "Anonym";
-      }
-      document.getElementById("username-display").innerText = currentUser;
+    function openNameModal() {
+      const input = document.getElementById("modal-username-input");
+      input.value = currentUser || "";
+      document.getElementById("name-modal").classList.add("active");
+      setTimeout(() => input.focus(), 100);
     }
 
-    function changeUsername() {
-      promptForUsername();
-      resetGame(); // Startet das Spiel für den neuen Namen direkt neu!
+    function saveNameFromModal() {
+      const input = document.getElementById("modal-username-input").value.trim();
+      if (input !== "") {
+        currentUser = input;
+        localStorage.setItem("em_puzzle_username", currentUser);
+        document.getElementById("username-display").innerText = currentUser;
+        document.getElementById("name-modal").classList.remove("active");
+        resetGame();
+      }
     }
+
+    // Enter-Taste im Modal unterstützen
+    document.getElementById("modal-username-input").addEventListener("keypress", function(e) {
+      if (e.key === "Enter") {
+        saveNameFromModal();
+      }
+    });
 
     // MONTAGS-LOGIK & BILD-WECHSEL
     const githubUsername = "David24387"; 
@@ -363,7 +456,6 @@
     let gameStarted = false;
     let gameFinished = false;
 
-    // PRÜFEN, OB NUTZER SCHON EINEN NAMEN HAT
     initUser();
 
     const puzzleImg = new Image();
@@ -407,7 +499,6 @@
       shuffle();
     }
 
-    // RESTART BEIM NAMENSWECHSEL
     function resetGame() {
       clearInterval(timerInterval);
       gameStarted = false;
