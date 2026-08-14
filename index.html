@@ -39,7 +39,7 @@
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
       text-align: center;
       width: 100%;
-      max-width: 340px; /* Standard für Mobile */
+      max-width: 340px;
       position: relative;
       transition: max-width 0.3s ease;
     }
@@ -255,7 +255,7 @@
 
     emailjs.init(EMAILJS_PUBLIC_KEY);
 
-    // USER-MANAGEMENT (OHNE LOCALSTORAGE = BEIM SEITENAUFRUF IMMER FRAGEN)
+    // USER-MANAGEMENT
     let currentUser = "";
 
     function promptForUsername() {
@@ -270,7 +270,7 @@
 
     function changeUsername() {
       promptForUsername();
-      resetGame(); // Startet das Spiel direkt für den neuen Namen neu!
+      resetGame(); // Setzt das komplette Spiel sofort zurück!
     }
 
     // MONTAGS-LOGIK & BILD-WECHSEL
@@ -398,18 +398,18 @@
       shuffle();
     }
 
-    // RESTART-FUNKTION BEIM NAMENSWECHSEL
+    // SAUBERER RESTART BEIM NAMENSWECHSEL
     function resetGame() {
       clearInterval(timerInterval);
       gameStarted = false;
-      gameFinished = false;
+      gameFinished = false; // Zurücksetzen des Gewonnen-Status!
       seconds = 0;
       moves = 0;
+      emptyPos = { row: 2, col: 2 };
       timerEl.innerText = "00:00";
       movesEl.innerText = "0";
       messageEl.innerText = "";
-      emptyPos = { row: 2, col: 2 };
-      initGame();
+      initGame(); // Erstellt und mischt das Spielfeld komplett neu
     }
 
     function updatePosition(tile) {
