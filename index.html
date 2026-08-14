@@ -12,7 +12,7 @@
     :root {
       --primary-color: #003366; /* EUROMASTER Blau */
       --accent-color: #e30613;  /* EUROMASTER Rot */
-      --bg-color: #f4f6f9;      /* Grauer Hintergrund */
+      --bg-color: #f4f6f9;
       --board-size: 300px;
     }
 
@@ -83,13 +83,14 @@
       color: var(--primary-color);
     }
 
+    /* SCHÖNES HELL-BLAUES SPIELFELD OHNE HÄSSLICHES GRAU */
     #board {
       width: var(--board-size);
       height: var(--board-size);
       position: relative;
       border: 3px solid var(--primary-color);
       border-radius: 6px;
-      background-color: #eef3f8;
+      background-color: #eef3f8; /* Helles EUROMASTER Blau-Grau */
       background-image: radial-gradient(var(--primary-color) 0.5px, transparent 0.5px);
       background-size: 10px 10px;
       margin: 0 auto;
