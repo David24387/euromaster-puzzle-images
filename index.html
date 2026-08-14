@@ -255,13 +255,22 @@
 
     emailjs.init(EMAILJS_PUBLIC_KEY);
 
-    // USER-MANAGEMENT
-    let currentUser = "";
+    // USER-MANAGEMENT (MERKT SICH DEN NAMEN, ERFRAGT IHN NUR BEIM ERSTEN MAL)
+    let currentUser = localStorage.getItem("em_puzzle_username");
+
+    function initUser() {
+      if (!currentUser || currentUser.trim() === "") {
+        promptForUsername();
+      } else {
+        document.getElementById("username-display").innerText = currentUser;
+      }
+    }
 
     function promptForUsername() {
       const input = prompt("Willkommen zur EUROMASTER Challenge!\nBitte gib deinen Namen ein:", currentUser || "");
       if (input && input.trim() !== "") {
         currentUser = input.trim();
+        localStorage.setItem("em_puzzle_username", currentUser);
       } else if (!currentUser) {
         currentUser = "Anonym";
       }
@@ -270,7 +279,7 @@
 
     function changeUsername() {
       promptForUsername();
-      resetGame(); // Setzt das komplette Spiel sofort zurück!
+      resetGame(); // Startet das Spiel für den neuen Namen direkt neu!
     }
 
     // MONTAGS-LOGIK & BILD-WECHSEL
@@ -354,8 +363,8 @@
     let gameStarted = false;
     let gameFinished = false;
 
-    // NAMENSABFRAGE VOR DEM LADEN DES SPIELS
-    promptForUsername();
+    // PRÜFEN, OB NUTZER SCHON EINEN NAMEN HAT
+    initUser();
 
     const puzzleImg = new Image();
     puzzleImg.src = imageUrl;
@@ -398,18 +407,18 @@
       shuffle();
     }
 
-    // SAUBERER RESTART BEIM NAMENSWECHSEL
+    // RESTART BEIM NAMENSWECHSEL
     function resetGame() {
       clearInterval(timerInterval);
       gameStarted = false;
-      gameFinished = false; // Zurücksetzen des Gewonnen-Status!
+      gameFinished = false;
       seconds = 0;
       moves = 0;
       emptyPos = { row: 2, col: 2 };
       timerEl.innerText = "00:00";
       movesEl.innerText = "0";
       messageEl.innerText = "";
-      initGame(); // Erstellt und mischt das Spielfeld komplett neu
+      initGame();
     }
 
     function updatePosition(tile) {
