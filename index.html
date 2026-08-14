@@ -12,7 +12,7 @@
     :root {
       --primary-color: #003366; /* EUROMASTER Blau */
       --accent-color: #e30613;  /* EUROMASTER Rot */
-      --bg-color: #f4f6f9;
+      --bg-color: #f4f6f9;      /* Grauer Hintergrund */
       --board-size: 300px;
     }
 
@@ -21,26 +21,32 @@
       touch-action: manipulation;
     }
 
-    body {
-      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background-color: var(--bg-color);
+    html, body {
+      background-color: #f4f6f9 !important;
       margin: 0;
       padding: 10px;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
       color: #333;
     }
 
     .puzzle-container {
       background: #ffffff;
       border-radius: 12px;
-      padding: 15px;
+      padding: 20px;
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
       text-align: center;
       width: 100%;
-      max-width: 340px;
+      max-width: 340px; /* Standard für Mobile */
       position: relative;
+      transition: max-width 0.3s ease;
+    }
+
+    .header-area {
+      width: 100%;
+      margin-bottom: 10px;
     }
 
     h2 {
@@ -71,6 +77,22 @@
       padding: 0;
     }
 
+    /* RESPONSIVE LAYOUT CONTAINER */
+    .main-content {
+      display: flex;
+      flex-direction: column; /* Standard: Untereinander (Mobile) */
+      align-items: center;
+      gap: 15px;
+      width: 100%;
+    }
+
+    .game-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+
     .stats {
       display: flex;
       justify-content: space-around;
@@ -81,16 +103,17 @@
       font-weight: bold;
       font-size: 0.9rem;
       color: var(--primary-color);
+      width: 100%;
+      max-width: var(--board-size);
     }
 
-    /* SCHÖNES HELL-BLAUES SPIELFELD OHNE HÄSSLICHES GRAU */
     #board {
       width: var(--board-size);
       height: var(--board-size);
       position: relative;
       border: 3px solid var(--primary-color);
       border-radius: 6px;
-      background-color: #eef3f8; /* Helles EUROMASTER Blau-Grau */
+      background-color: #eef3f8;
       background-image: radial-gradient(var(--primary-color) 0.5px, transparent 0.5px);
       background-size: 10px 10px;
       margin: 0 auto;
@@ -120,7 +143,7 @@
     }
 
     .leaderboard {
-      margin-top: 15px;
+      width: 100%;
       text-align: left;
       border-top: 2px solid #eef3f8;
       padding-top: 10px;
@@ -142,7 +165,7 @@
     .leaderboard-item {
       display: flex;
       justify-content: space-between;
-      padding: 5px 8px;
+      padding: 6px 8px;
       font-size: 0.8rem;
       border-bottom: 1px solid #f0f0f0;
     }
@@ -161,30 +184,66 @@
       font-size: 0.8rem;
       cursor: pointer;
     }
+
+    /* =========================================================================
+       DESKTOP OPTIMIERUNG (AB 650px BREITE): NEBENEINANDER LOGIK
+       ========================================================================= */
+    @media (min-width: 650px) {
+      .puzzle-container {
+        max-width: 680px; /* Erweitert die Karte für Desktop */
+      }
+
+      .main-content {
+        flex-direction: row; /* Nebeneinander anordnen */
+        align-items: flex-start;
+        justify-content: center;
+        gap: 25px;
+      }
+
+      .game-section {
+        width: 300px;
+      }
+
+      .leaderboard {
+        width: 280px;
+        border-top: none; /* Kein Trennstrich oben nötig */
+        border-left: 2px solid #eef3f8; /* Trennstrich links zur Trennung */
+        padding-top: 0;
+        padding-left: 20px;
+      }
+    }
   </style>
 </head>
 <body>
 
   <div class="puzzle-container">
-    <h2>EUROMASTER Challenge</h2>
-    <div class="user-badge">
-      <span>Spieler: <strong id="username-display">Lädt...</strong></span>
-      <button class="change-btn" onclick="changeUsername()">(Konto)</button>
+    <div class="header-area">
+      <h2>EUROMASTER Challenge</h2>
+      <div class="user-badge">
+        <span>Spieler: <strong id="username-display">Lädt...</strong></span>
+        <button class="change-btn" onclick="changeUsername()">(Konto)</button>
+      </div>
     </div>
 
-    <div class="stats">
-      <div>Zeit: <span id="timer">00:00</span></div>
-      <div>Züge: <span id="moves">0</span></div>
-    </div>
+    <div class="main-content">
+      <!-- LINKE SEITE (DESKTOP): SPIEL & STATS -->
+      <div class="game-section">
+        <div class="stats">
+          <div>Zeit: <span id="timer">00:00</span></div>
+          <div>Züge: <span id="moves">0</span></div>
+        </div>
 
-    <div id="board"></div>
-    <div id="message" class="message-box"></div>
+        <div id="board"></div>
+        <div id="message" class="message-box"></div>
+      </div>
 
-    <div class="leaderboard">
-      <h3 id="leaderboard-title">🏆 Wochen-Bestenliste</h3>
-      <ol id="leaderboard-list" class="leaderboard-list">
-        <li style="text-align:center; color:#888; font-size:0.8rem;">Lädt...</li>
-      </ol>
+      <!-- RECHTE SEITE (DESKTOP) / UNTEN (MOBILE): BESTENLISTE -->
+      <div class="leaderboard">
+        <h3 id="leaderboard-title">🏆 Wochen-Bestenliste</h3>
+        <ol id="leaderboard-list" class="leaderboard-list">
+          <li style="text-align:center; color:#888; font-size:0.8rem;">Lädt...</li>
+        </ol>
+      </div>
     </div>
 
     <button class="admin-trigger" onclick="openAdminMenu()">⚙️</button>
